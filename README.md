@@ -171,3 +171,25 @@ MIT License
 ## 💬 Support
 
 For issues & questions, create GitHub issues.
+
+
+## 🖥️ MVP Web UI
+
+Run backend API first:
+```bash
+python main.py api
+```
+
+Then run Streamlit UI:
+```bash
+streamlit run src/ui/streamlit_app.py
+```
+
+The UI supports:
+- Single query
+- Batch query
+- One-off scheduled query
+
+## 🧭 Architecture Map
+
+See `docs/PROJECT_ARCHITECTURE.md` for maintained architecture, feature matrix, and roadmap.

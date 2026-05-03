@@ -1,48 +1,97 @@
+from datetime import datetime
+from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from loguru import logger
 from src.qa.qa_pipeline import RAGPipeline
 from src.vectorstore.chroma_db import ChromaVectorStore
+from src.api.scheduler import scheduler
 
 router = APIRouter()
 rag_pipeline = RAGPipeline()
 
+
 class QueryRequest(BaseModel):
-    """Query request model"""
     question: str
     top_k: int = 20
     include_context: bool = False
 
-class QueryResponse(BaseModel):
-    """Query response model"""
+
+class BatchQueryRequest(BaseModel):
+    questions: List[str]
+    top_k: int = 20
+    include_context: bool = False
+
+
+class ScheduleQueryRequest(BaseModel):
     question: str
-    answer: str
-    document_count: int
-    score: float = 0.0
+    run_at_iso: str
+    top_k: int = 20
+    include_context: bool = False
+
 
 class CustomerSupportRequest(BaseModel):
-    """Customer support query model"""
     customer_id: str
     message: str
     priority: str = "normal"
 
+
 @router.post("/query")
 async def query(request: QueryRequest):
-    """Execute Q&A query"""
     try:
+        logger.info(f"/query question_len={len(request.question)} top_k={request.top_k}")
         result = rag_pipeline.query(
             request.question,
             top_k=request.top_k,
-            include_context=request.include_context
+            include_context=request.include_context,
         )
         return result
     except Exception as e:
-        logger.error(f"Query error: {e}")
+        logger.exception("Query error")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/batch-query")
+async def batch_query(request: BatchQueryRequest):
+    try:
+        logger.info(f"/batch-query count={len(request.questions)} top_k={request.top_k}")
+        results = [
+            rag_pipeline.query(q, top_k=request.top_k, include_context=request.include_context)
+            for q in request.questions
+        ]
+        return {"count": len(results), "results": results}
+    except Exception as e:
+        logger.exception("Batch query error")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/schedule-query")
+async def schedule_query(request: ScheduleQueryRequest):
+    try:
+        run_at = datetime.fromisoformat(request.run_at_iso)
+        payload = request.model_dump()
+
+        def _execute(p):
+            return rag_pipeline.query(
+                p["question"],
+                top_k=p["top_k"],
+                include_context=p["include_context"],
+            )
+
+        job_id = scheduler.schedule_once(run_at, _execute, payload)
+        return {"job_id": job_id, "status": "scheduled", "run_at": request.run_at_iso}
+    except Exception as e:
+        logger.exception("Schedule query error")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/schedule-query/{job_id}")
+async def get_scheduled_job(job_id: str):
+    return scheduler.get_job(job_id)
+
 
 @router.post("/customer-support")
 async def customer_support(request: CustomerSupportRequest):
-    """Handle customer support query"""
     try:
         result = rag_pipeline.customer_support_query(request.message)
         return {
@@ -50,19 +99,18 @@ async def customer_support(request: CustomerSupportRequest):
             "query": request.message,
             "response": result["answer"],
             "priority": request.priority,
-            "confidence": result.get("retrieved_documents", [{}])[0].get("score", 0)
+            "confidence": result.get("retrieved_documents", [{}])[0].get("score", 0),
         }
     except Exception as e:
-        logger.error(f"Customer support error: {e}")
+        logger.exception("Customer support error")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/stats")
 async def get_stats():
-    """Get system statistics"""
     try:
         vectorstore = ChromaVectorStore()
-        stats = vectorstore.get_collection_stats()
-        return stats
+        return vectorstore.get_collection_stats()
     except Exception as e:
-        logger.error(f"Stats error: {e}")
+        logger.exception("Stats error")
         raise HTTPException(status_code=500, detail=str(e))
