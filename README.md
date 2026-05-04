@@ -193,3 +193,34 @@ The UI supports:
 ## 🧭 Architecture Map
 
 See `docs/PROJECT_ARCHITECTURE.md` for maintained architecture, feature matrix, and roadmap.
+
+
+## ⚡ One-Command Run (Beginner Friendly)
+
+After installing dependencies once:
+```bash
+pip install -r requirements.txt
+```
+
+Run everything with one command:
+```bash
+./scripts/start_app.sh
+```
+
+This script starts:
+- Ollama server
+- pulls configured model (default: `mistral`)
+- FastAPI backend
+- Streamlit UI
+
+Open:
+- UI: `http://localhost:8501`
+- API docs: `http://localhost:8000/docs`
+
+### About LLM location
+
+LLM weights are managed by Ollama and stored in Ollama's model store (not inside this Git repository by default).
+You can select model with:
+```bash
+RAG_LLM_MODEL=mistral ./scripts/start_app.sh
+```
