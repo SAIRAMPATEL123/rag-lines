@@ -171,3 +171,56 @@ MIT License
 ## 💬 Support
 
 For issues & questions, create GitHub issues.
+
+
+## 🖥️ MVP Web UI
+
+Run backend API first:
+```bash
+python main.py api
+```
+
+Then run Streamlit UI:
+```bash
+streamlit run src/ui/streamlit_app.py
+```
+
+The UI supports:
+- Single query
+- Batch query
+- One-off scheduled query
+
+## 🧭 Architecture Map
+
+See `docs/PROJECT_ARCHITECTURE.md` for maintained architecture, feature matrix, and roadmap.
+
+
+## ⚡ One-Command Run (Beginner Friendly)
+
+After installing dependencies once:
+```bash
+pip install -r requirements.txt
+```
+
+Run everything with one command:
+```bash
+./scripts/start_app.sh
+```
+
+This script starts:
+- Ollama server
+- pulls configured model (default: `mistral`)
+- FastAPI backend
+- Streamlit UI
+
+Open:
+- UI: `http://localhost:8501`
+- API docs: `http://localhost:8000/docs`
+
+### About LLM location
+
+LLM weights are managed by Ollama and stored in Ollama's model store (not inside this Git repository by default).
+You can select model with:
+```bash
+RAG_LLM_MODEL=mistral ./scripts/start_app.sh
+```

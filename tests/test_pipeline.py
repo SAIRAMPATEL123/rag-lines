@@ -6,6 +6,7 @@ pytest.importorskip("pydantic_settings")
 from src.ingestion.document_loader import Document
 from src.ingestion.chunker import FixedChunker, SemanticChunker
 
+pytest.importorskip("sentence_transformers")
 sentence_transformers = pytest.importorskip("sentence_transformers")
 from src.embeddings.embedding_model import EmbeddingModel
 
