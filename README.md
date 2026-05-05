@@ -71,6 +71,12 @@ git checkout rag-development
 pip install -r requirements.txt
 ```
 
+### Python Version
+
+- Recommended: **Python 3.11**
+- Supported for local development: **Python 3.13.3** (with updated dependency ranges in `requirements.txt`)
+
+
 ### 2. Configure Environment
 ```bash
 cp .env.example .env
