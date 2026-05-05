@@ -17,43 +17,48 @@ A comprehensive RAG system built in Python for Q&A and customer support, support
 rag-lines/
 ├── config/
 │   ├── __init__.py
-│   └── config.py              # Configuration management
+│   └── config.py                  # Configuration management
+├── docs/
+│   └── PROJECT_ARCHITECTURE.md    # Architecture + feature roadmap
+├── scripts/
+│   └── start_app.sh               # One-command launcher (Ollama + API + UI)
 ├── src/
 │   ├── __init__.py
 │   ├── ingestion/
 │   │   ├── __init__.py
-│   │   ├── document_loader.py # Multi-format document loading
-│   │   └── chunker.py         # Semantic chunking
+│   │   ├── document_loader.py     # Multi-format document loading
+│   │   └── chunker.py             # Semantic chunking
 │   ├── embeddings/
 │   │   ├── __init__.py
-│   │   └── embedding_model.py # Local embedding generation
+│   │   └── embedding_model.py     # Local embedding generation
 │   ├── vectorstore/
 │   │   ├── __init__.py
-│   │   └── chroma_db.py       # Chroma vector database setup
+│   │   └── chroma_db.py           # Chroma vector database setup
 │   ├── retrieval/
 │   │   ├── __init__.py
-│   │   ├── retriever.py       # Hybrid retrieval logic
-│   │   └── reranker.py        # Result reranking
+│   │   ├── retriever.py           # Hybrid retrieval logic
+│   │   └── reranker.py            # Result reranking
 │   ├── llm/
 │   │   ├── __init__.py
-│   │   └── local_llm.py       # Local LLM integration (Ollama/HF)
+│   │   └── local_llm.py           # Local LLM integration (Ollama)
 │   ├── qa/
 │   │   ├── __init__.py
-│   │   └── qa_pipeline.py     # End-to-end Q&A pipeline
+│   │   └── qa_pipeline.py         # End-to-end Q&A pipeline
 │   ├── evaluation/
 │   │   ├── __init__.py
-│   │   └── evaluator.py       # RAGAS evaluation metrics
-│   └── api/
-│       ├── __init__.py
-│       ├── app.py             # FastAPI application
-│       └── routes.py          # API endpoints
-├── notebooks/
-│   └── exploration.ipynb      # Development & testing
+│   │   └── evaluator.py           # RAGAS/basic evaluation metrics
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── app.py                 # FastAPI application
+│   │   ├── routes.py              # API endpoints
+│   │   └── scheduler.py           # In-process one-off scheduler
+│   └── ui/
+│       └── streamlit_app.py       # MVP Streamlit UI
 ├── tests/
-│   └── test_pipeline.py       # Unit & integration tests
-├── requirements.txt           # Python dependencies
-├── .env.example               # Environment variables template
-└── main.py                    # Entry point
+│   └── test_pipeline.py           # Unit tests
+├── requirements.txt               # Python dependencies
+├── .env.example                   # Environment variables template
+└── main.py                        # Entry point
 ```
 
 ## 🚀 Quick Start
@@ -171,3 +176,56 @@ MIT License
 ## 💬 Support
 
 For issues & questions, create GitHub issues.
+
+
+## 🖥️ MVP Web UI
+
+Run backend API first:
+```bash
+python main.py api
+```
+
+Then run Streamlit UI:
+```bash
+streamlit run src/ui/streamlit_app.py
+```
+
+The UI supports:
+- Single query
+- Batch query
+- One-off scheduled query
+
+## 🧭 Architecture Map
+
+See `docs/PROJECT_ARCHITECTURE.md` for maintained architecture, feature matrix, and roadmap.
+
+
+## ⚡ One-Command Run (Beginner Friendly)
+
+After installing dependencies once:
+```bash
+pip install -r requirements.txt
+```
+
+Run everything with one command:
+```bash
+./scripts/start_app.sh
+```
+
+This script starts:
+- Ollama server
+- pulls configured model (default: `mistral`)
+- FastAPI backend
+- Streamlit UI
+
+Open:
+- UI: `http://localhost:8501`
+- API docs: `http://localhost:8000/docs`
+
+### About LLM location
+
+LLM weights are managed by Ollama and stored in Ollama's model store (not inside this Git repository by default).
+You can select model with:
+```bash
+RAG_LLM_MODEL=mistral ./scripts/start_app.sh
+```

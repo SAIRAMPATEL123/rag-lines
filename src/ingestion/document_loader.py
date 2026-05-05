@@ -1,10 +1,6 @@
 import os
 from typing import List, Dict, Any
 from pathlib import Path
-import PyPDF2
-import markdown2
-from bs4 import BeautifulSoup
-import requests
 from loguru import logger
 from config.config import get_config
 
@@ -62,6 +58,7 @@ class DocumentLoader:
     def _load_pdf(self, file_path: str) -> Document:
         """Extract text from PDF"""
         try:
+            import PyPDF2
             text = ""
             with open(file_path, 'rb') as pdf_file:
                 reader = PyPDF2.PdfReader(pdf_file)
@@ -92,6 +89,7 @@ class DocumentLoader:
         with open(file_path, 'r', encoding='utf-8') as f:
             html_content = f.read()
         
+        from bs4 import BeautifulSoup
         soup = BeautifulSoup(html_content, 'html.parser')
         # Remove script and style elements
         for script in soup(["script", "style"]):
@@ -112,6 +110,8 @@ class DocumentLoader:
     def load_from_web(self, url: str) -> Document:
         """Load and parse web content"""
         try:
+            import requests
+            from bs4 import BeautifulSoup
             response = requests.get(url, timeout=10)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
