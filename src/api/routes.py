@@ -8,7 +8,14 @@ from src.vectorstore.chroma_db import ChromaVectorStore
 from src.api.scheduler import scheduler
 
 router = APIRouter()
-rag_pipeline = RAGPipeline()
+_rag_pipeline = None
+
+
+def get_pipeline() -> RAGPipeline:
+    global _rag_pipeline
+    if _rag_pipeline is None:
+        _rag_pipeline = RAGPipeline()
+    return _rag_pipeline
 
 
 class QueryRequest(BaseModel):
@@ -40,7 +47,7 @@ class CustomerSupportRequest(BaseModel):
 async def query(request: QueryRequest):
     try:
         logger.info(f"/query question_len={len(request.question)} top_k={request.top_k}")
-        result = rag_pipeline.query(
+        result = get_pipeline().query(
             request.question,
             top_k=request.top_k,
             include_context=request.include_context,
@@ -56,7 +63,7 @@ async def batch_query(request: BatchQueryRequest):
     try:
         logger.info(f"/batch-query count={len(request.questions)} top_k={request.top_k}")
         results = [
-            rag_pipeline.query(q, top_k=request.top_k, include_context=request.include_context)
+            get_pipeline().query(q, top_k=request.top_k, include_context=request.include_context)
             for q in request.questions
         ]
         return {"count": len(results), "results": results}
@@ -72,7 +79,7 @@ async def schedule_query(request: ScheduleQueryRequest):
         payload = request.model_dump()
 
         def _execute(p):
-            return rag_pipeline.query(
+            return get_pipeline().query(
                 p["question"],
                 top_k=p["top_k"],
                 include_context=p["include_context"],
@@ -93,7 +100,7 @@ async def get_scheduled_job(job_id: str):
 @router.post("/customer-support")
 async def customer_support(request: CustomerSupportRequest):
     try:
-        result = rag_pipeline.customer_support_query(request.message)
+        result = get_pipeline().customer_support_query(request.message)
         return {
             "customer_id": request.customer_id,
             "query": request.message,
