@@ -1,13 +1,12 @@
 # Core RAG & LLM
 langchain==0.1.20
-llama-index>=0.11.0
 chromadb>=0.5.5
 
 # Embeddings
 sentence-transformers>=3.0.0
 
 # Local LLM
-ollama==0.1.0
+ollama>=0.1.0
 huggingface-hub>=0.24.0
 transformers>=4.44.0
 
@@ -17,14 +16,14 @@ pdfplumber==0.10.4
 markdown2==2.4.10
 beautifulsoup4==4.12.2
 requests==2.31.0
-lxml==4.9.3
+lxml>=4.9.3
 
 # Database
 SQLAlchemy==2.0.23
-psycopg2-binary==2.9.9
+# psycopg2-binary is optional — only needed if using PostgreSQL
+# psycopg2-binary==2.9.9
 
 # Evaluation
-ragas>=0.1.0
 rouge-score==0.1.2
 nltk==3.8.1
 
