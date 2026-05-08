@@ -24,7 +24,17 @@ class RAGPipeline:
         # Step 1: Retrieve relevant documents
         top_k = top_k or self.config.retrieval_top_k
         retrieved_docs = self.retriever.retrieve(question, top_k=top_k)
-        
+       
+        # Handle empty results gracefully
+        if not retrieved_docs:
+            return {
+                "question": question,
+                "answer": "⚠️ No documents found. Please ingest documents first using: python main.py ingest <path>",
+                "retrieved_documents": [],
+                "context_used": None,
+                "document_count": 0
+            }
+      
         # Step 2: Rerank if enabled
         if self.use_reranking and self.reranker:
             retrieved_docs = self.reranker.rerank(question, retrieved_docs, top_k=5)

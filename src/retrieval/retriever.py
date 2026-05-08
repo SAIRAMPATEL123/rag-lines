@@ -17,18 +17,14 @@ class Retriever:
     def retrieve(self, query: str, top_k: int = None) -> List[Dict]:
         """Retrieve relevant documents using hybrid search"""
         top_k = top_k or self.top_k
-        
+
+        # Guard: return empty if collection has no documents yet
+        if self.vectorstore.count_documents() == 0:
+            logger.warning("Vector store is empty — ingest documents first: python main.py ingest <path>")
+            return []
+
         # Semantic search
         semantic_results = self.vectorstore.search(query, top_k=top_k)
-        
-        # BM25 search (simple implementation)
-        bm25_results = self._bm25_search(query, top_k=top_k)
-        
-        # Combine and rank results
-        combined_results = self._combine_results(semantic_results, bm25_results)
-        
-        logger.info(f"Retrieved {len(combined_results)} documents for query")
-        return combined_results
     
     def _bm25_search(self, query: str, top_k: int) -> List[Tuple[str, float]]:
         """Simple BM25 implementation using term frequency"""
