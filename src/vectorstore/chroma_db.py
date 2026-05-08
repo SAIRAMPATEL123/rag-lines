@@ -15,32 +15,33 @@ class ChromaVectorStore:
         self.collection_name = collection_name
         self.embedding_model = EmbeddingModel()
         
-        # Use absolute path to avoid relative path issues
+        # Absolute path — avoids relative path issues between ingest and api
         base_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.abspath(os.path.join(base_dir, "..", ".."))
         self.db_path = os.path.join(project_root, "data", "chroma_db")
         os.makedirs(self.db_path, exist_ok=True)
         
-        logger.info(f"Initializing Chroma at ABSOLUTE path: {self.db_path}")
+        logger.info(f"Initializing Chroma at: {self.db_path}")
         self.client = chromadb.PersistentClient(path=self.db_path)
         
-        # List existing collections for debug
-        existing = self.client.list_collections()
-        logger.info(f"Existing collections in DB: {[c.name for c in existing]}")
-        
-        self.collection = self.client.get_or_create_collection(
-            name=collection_name,
-            metadata={"hnsw:space": "cosine"}
-        )
-        doc_count = self.collection.count()
-        logger.info(f"Collection '{collection_name}' ready — {doc_count} documents loaded")
+        # KEY FIX: get_collection first (no metadata), only create if not exists
+        # get_or_create_collection with metadata on existing collection causes issues in chromadb 1.x
+        try:
+            self.collection = self.client.get_collection(name=collection_name)
+            logger.info(f"Loaded existing collection '{collection_name}' — {self.collection.count()} docs")
+        except Exception:
+            self.collection = self.client.create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+            logger.info(f"Created new collection '{collection_name}'")
 
     def add_documents(self, chunks: List[Chunk]) -> None:
         if not chunks:
             logger.warning("No chunks to add")
             return
         
-        logger.info(f"Adding {len(chunks)} chunks to vector store at {self.db_path}")
+        logger.info(f"Adding {len(chunks)} chunks to {self.db_path}")
         texts = [chunk.text for chunk in chunks]
         embeddings = self.embedding_model.embed(texts)
         metadatas = [chunk.metadata for chunk in chunks]
@@ -52,21 +53,19 @@ class ChromaVectorStore:
             metadatas=metadatas,
             documents=texts
         )
-        logger.info(f"Successfully added {len(chunks)} chunks — total now: {self.collection.count()}")
+        logger.info(f"Added {len(chunks)} chunks — total: {self.collection.count()}")
 
     def search(self, query: str, top_k: int = None) -> List[Tuple[str, float, Dict]]:
         top_k = top_k or self.config.retrieval_top_k
         actual_count = self.collection.count()
-        
-        logger.info(f"SEARCH called — collection has {actual_count} docs, requesting top {top_k}")
+        logger.info(f"Search — collection has {actual_count} docs")
         
         if actual_count == 0:
             logger.warning("Collection is empty!")
             return []
         
-        # CRITICAL: n_results cannot exceed actual document count
+        # n_results cannot exceed actual document count
         n_results = min(top_k, actual_count)
-        logger.info(f"Using n_results={n_results}")
         
         query_embedding = self.embedding_model.embed_single(query)
         results = self.collection.query(
@@ -82,7 +81,7 @@ class ChromaVectorStore:
                 metadata = results['metadatas'][0][i] if results['metadatas'] else {}
                 retrieved_docs.append((doc, similarity, metadata))
         
-        logger.info(f"Search complete — returned {len(retrieved_docs)} documents")
+        logger.info(f"Returning {len(retrieved_docs)} documents")
         return retrieved_docs
 
     def delete_collection(self) -> None:
@@ -91,7 +90,7 @@ class ChromaVectorStore:
 
     def count_documents(self) -> int:
         count = self.collection.count()
-        logger.info(f"count_documents() = {count}")
+        logger.info(f"count_documents = {count}")
         return count
 
     def get_collection_stats(self) -> Dict[str, Any]:
