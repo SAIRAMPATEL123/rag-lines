@@ -121,3 +121,34 @@ async def get_stats():
     except Exception as e:
         logger.exception("Stats error")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/debug")
+async def debug_chromadb():
+    """Debug endpoint — shows exact ChromaDB state"""
+    import chromadb, os
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(base_dir, "..", ".."))
+        db_path = os.path.join(project_root, "data", "chroma_db")
+        
+        client = chromadb.PersistentClient(path=db_path)
+        collections = client.list_collections()
+        
+        result = {
+            "db_path": db_path,
+            "db_path_exists": os.path.exists(db_path),
+            "db_files": os.listdir(db_path) if os.path.exists(db_path) else [],
+            "collections": []
+        }
+        
+        for col in collections:
+            c = client.get_collection(col.name)
+            result["collections"].append({
+                "name": col.name,
+                "count": c.count()
+            })
+        
+        return result
+    except Exception as e:
+        return {"error": str(e)}

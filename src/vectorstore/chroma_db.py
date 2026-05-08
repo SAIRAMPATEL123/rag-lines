@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Tuple
 import chromadb
+import os
 import numpy as np
 from loguru import logger
 from config.config import get_config
@@ -14,85 +15,89 @@ class ChromaVectorStore:
         self.collection_name = collection_name
         self.embedding_model = EmbeddingModel()
         
-        # Initialize Chroma client (new API: chromadb >= 0.5.x)
-        logger.info(f"Initializing Chroma at {self.config.vectorstore_path}")
-        self.client = chromadb.PersistentClient(path=self.config.vectorstore_path)
+        # Use absolute path to avoid relative path issues
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(base_dir, "..", ".."))
+        self.db_path = os.path.join(project_root, "data", "chroma_db")
+        os.makedirs(self.db_path, exist_ok=True)
         
-        # Get existing collection or create new one
-        try:
-            self.collection = self.client.get_collection(name=collection_name)
-            logger.info(f"Loaded existing Chroma collection '{collection_name}' with {self.collection.count()} docs")
-        except Exception:
-            self.collection = self.client.create_collection(
-                name=collection_name,
-                metadata={"hnsw:space": "cosine"}
-            )
-            logger.info(f"Created new Chroma collection '{collection_name}'")
-    
+        logger.info(f"Initializing Chroma at ABSOLUTE path: {self.db_path}")
+        self.client = chromadb.PersistentClient(path=self.db_path)
+        
+        # List existing collections for debug
+        existing = self.client.list_collections()
+        logger.info(f"Existing collections in DB: {[c.name for c in existing]}")
+        
+        self.collection = self.client.get_or_create_collection(
+            name=collection_name,
+            metadata={"hnsw:space": "cosine"}
+        )
+        doc_count = self.collection.count()
+        logger.info(f"Collection '{collection_name}' ready — {doc_count} documents loaded")
+
     def add_documents(self, chunks: List[Chunk]) -> None:
-        """Add chunks to vector store"""
         if not chunks:
             logger.warning("No chunks to add")
             return
         
-        logger.info(f"Adding {len(chunks)} chunks to vector store")
-        
-        # Extract texts and generate embeddings
+        logger.info(f"Adding {len(chunks)} chunks to vector store at {self.db_path}")
         texts = [chunk.text for chunk in chunks]
         embeddings = self.embedding_model.embed(texts)
-        
-        # Prepare metadata
         metadatas = [chunk.metadata for chunk in chunks]
         ids = [chunk.chunk_id for chunk in chunks]
         
-        # Add to Chroma
         self.collection.add(
             ids=ids,
             embeddings=embeddings.tolist(),
             metadatas=metadatas,
             documents=texts
         )
-        logger.info(f"Successfully added {len(chunks)} chunks")
-    
+        logger.info(f"Successfully added {len(chunks)} chunks — total now: {self.collection.count()}")
+
     def search(self, query: str, top_k: int = None) -> List[Tuple[str, float, Dict]]:
-        """Search for similar documents"""
         top_k = top_k or self.config.retrieval_top_k
+        actual_count = self.collection.count()
         
-        # Generate query embedding
+        logger.info(f"SEARCH called — collection has {actual_count} docs, requesting top {top_k}")
+        
+        if actual_count == 0:
+            logger.warning("Collection is empty!")
+            return []
+        
+        # CRITICAL: n_results cannot exceed actual document count
+        n_results = min(top_k, actual_count)
+        logger.info(f"Using n_results={n_results}")
+        
         query_embedding = self.embedding_model.embed_single(query)
-        
-        # Search in Chroma
         results = self.collection.query(
             query_embeddings=[query_embedding.tolist()],
-            n_results=top_k
+            n_results=n_results
         )
         
-        # Format results
         retrieved_docs = []
         if results['documents'] and len(results['documents']) > 0:
             for i, doc in enumerate(results['documents'][0]):
                 distance = results['distances'][0][i]
-                # Convert distance to similarity (cosine similarity)
                 similarity = 1 - distance
                 metadata = results['metadatas'][0][i] if results['metadatas'] else {}
                 retrieved_docs.append((doc, similarity, metadata))
         
-        logger.debug(f"Retrieved {len(retrieved_docs)} documents for query")
+        logger.info(f"Search complete — returned {len(retrieved_docs)} documents")
         return retrieved_docs
-    
+
     def delete_collection(self) -> None:
-        """Delete the collection"""
         self.client.delete_collection(name=self.collection_name)
         logger.info(f"Collection '{self.collection_name}' deleted")
-    
+
     def count_documents(self) -> int:
-        """Get number of documents in collection"""
-        return self.collection.count()
-    
+        count = self.collection.count()
+        logger.info(f"count_documents() = {count}")
+        return count
+
     def get_collection_stats(self) -> Dict[str, Any]:
-        """Get collection statistics"""
         return {
             "name": self.collection_name,
             "document_count": self.count_documents(),
+            "db_path": self.db_path,
             "embedding_dimension": self.embedding_model.get_embedding_dimension()
         }
