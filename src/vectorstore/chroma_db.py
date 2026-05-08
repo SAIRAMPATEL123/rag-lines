@@ -1,6 +1,5 @@
 from typing import List, Dict, Any, Tuple
 import chromadb
-from chromadb.config import Settings
 import numpy as np
 from loguru import logger
 from config.config import get_config
@@ -15,14 +14,9 @@ class ChromaVectorStore:
         self.collection_name = collection_name
         self.embedding_model = EmbeddingModel()
         
-        # Initialize Chroma client
+        # Initialize Chroma client (new API: chromadb >= 0.5.x)
         logger.info(f"Initializing Chroma at {self.config.vectorstore_path}")
-        settings = Settings(
-            chroma_db_impl="duckdb+parquet",
-            persist_directory=self.config.vectorstore_path,
-            anonymized_telemetry=False,
-        )
-        self.client = chromadb.Client(settings)
+        self.client = chromadb.PersistentClient(path=self.config.vectorstore_path)
         
         # Get or create collection
         self.collection = self.client.get_or_create_collection(
