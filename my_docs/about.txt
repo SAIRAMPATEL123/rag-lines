@@ -1,0 +1,1 @@
+Sairam Bathula is an AI Engineer with 3+ years of experience. He specializes in building RAG systems, LLM applications, FastAPI backends and Machine Learning pipelines using Python. He is based in Hyderabad, India and is currently working on RAG-Lines, an open source retrieval augmented generation system. 
