@@ -18,12 +18,16 @@ class ChromaVectorStore:
         logger.info(f"Initializing Chroma at {self.config.vectorstore_path}")
         self.client = chromadb.PersistentClient(path=self.config.vectorstore_path)
         
-        # Get or create collection
-        self.collection = self.client.get_or_create_collection(
-            name=collection_name,
-            metadata={"hnsw:space": "cosine"}
-        )
-        logger.info(f"Chroma collection '{collection_name}' ready")
+        # Get existing collection or create new one
+        try:
+            self.collection = self.client.get_collection(name=collection_name)
+            logger.info(f"Loaded existing Chroma collection '{collection_name}' with {self.collection.count()} docs")
+        except Exception:
+            self.collection = self.client.create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+            logger.info(f"Created new Chroma collection '{collection_name}'")
     
     def add_documents(self, chunks: List[Chunk]) -> None:
         """Add chunks to vector store"""
