@@ -258,56 +258,178 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 with st.sidebar:
-    st.markdown("""<div style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-                  padding: 1.5rem; border-radius: 12px; text-align: center; color: white;
-                  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25); margin-bottom: 1.5rem;">
-                  <h3 style="margin: 0; font-size: 1.3rem;">⚙️ Settings & Status</h3>
-                  </div>""", unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
 
-    with st.expander("🔧 Advanced Options", expanded=True):
-        top_k_default = st.slider("Results (Top-K)", 1, 50, 20, key="sidebar_top_k")
-        include_context = st.checkbox("Show source context", value=True, key="sidebar_context")
-        show_scores = st.checkbox("Show relevance scores", value=True, key="sidebar_scores")
+        .nav-item {
+            padding: 1rem;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f0f9fa 0%, #ffffff 100%);
+            border: 2px solid #e0f2fe;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #0c4a6e;
+            text-align: center;
+            font-size: 0.95rem;
+        }
 
-    st.markdown("---")
-    st.markdown("### 📊 System Status")
+        .nav-item:hover {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+            border-color: #06b6d4;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        }
+
+        .status-card {
+            background: linear-gradient(135deg, #ecf9ff 0%, #f0fafe 100%);
+            border: 2px solid #cffafe;
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(6, 182, 212, 0.1);
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0.5rem 0;
+            color: #0c4a6e;
+            font-weight: 500;
+        }
+
+        .status-value {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+
+        .sidebar-section-title {
+            color: #0891b2;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.8rem;
+            margin: 1.5rem 0 1rem 0;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+                padding: 1rem; border-radius: 12px; text-align: center; color: white;
+                margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);">
+        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 900;">🧭 Navigation</h3>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_nav1, col_nav2 = st.columns(2)
+    with col_nav1:
+        if st.button("📊 Dashboard", use_container_width=True, key="nav_dashboard"):
+            st.session_state.current_page = "dashboard"
+        if st.button("🔍 Search", use_container_width=True, key="nav_search"):
+            st.session_state.current_page = "search"
+        if st.button("📤 Documents", use_container_width=True, key="nav_docs"):
+            st.session_state.current_page = "documents"
+
+    with col_nav2:
+        if st.button("📋 Batch", use_container_width=True, key="nav_batch"):
+            st.session_state.current_page = "batch"
+        if st.button("⏰ Scheduled", use_container_width=True, key="nav_scheduled"):
+            st.session_state.current_page = "scheduled"
+        if st.button("⚙️ Settings", use_container_width=True, key="nav_settings"):
+            st.session_state.current_page = "settings"
+
+    st.markdown("<p class='sidebar-section-title'>📊 System Status</p>", unsafe_allow_html=True)
+
     try:
         resp = requests.get(f"{API_BASE}/stats", timeout=5)
         if resp.ok:
             stats = resp.json()
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("📚 Docs", stats.get("document_count", 0))
-            with col2:
-                st.metric("🔢 Dim", stats.get("embedding_dimension", 0))
+            st.markdown(f"""
+            <div class="status-card">
+                <div class="status-item">
+                    <span>📚 Documents:</span>
+                    <span class="status-value">{stats.get('document_count', 0)}</span>
+                </div>
+                <div class="status-item">
+                    <span>🔢 Embedding Dim:</span>
+                    <span class="status-value">{stats.get('embedding_dimension', 0)}</span>
+                </div>
+                <div class="status-item">
+                    <span>💾 Database:</span>
+                    <span style="color: #0891b2; font-weight: 700;">Chroma</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            st.error("Cannot fetch stats")
+            st.warning("❌ Cannot fetch stats")
     except:
-        st.warning("API unreachable")
+        st.warning("❌ API unreachable")
 
-    st.markdown("---")
-    st.markdown("### 📝 Query History")
+    st.markdown("<p class='sidebar-section-title'>🔧 Settings</p>", unsafe_allow_html=True)
+
+    with st.expander("⚡ Query Options", expanded=True):
+        top_k_default = st.slider("Top-K Results", 1, 50, 20, key="sidebar_top_k")
+        include_context = st.checkbox("Show sources", value=True, key="sidebar_context")
+        show_scores = st.checkbox("Show scores", value=True, key="sidebar_scores")
+
+    st.markdown("<p class='sidebar-section-title'>📝 History</p>", unsafe_allow_html=True)
+
     if "query_history" not in st.session_state:
         st.session_state.query_history = []
 
     if len(st.session_state.query_history) > 0:
+        st.markdown(f"<small style='color: #64748b;'><strong>{len(st.session_state.query_history)} queries</strong></small>",
+                   unsafe_allow_html=True)
         for i, q in enumerate(st.session_state.query_history[-5:]):
-            if st.button(f"📌 {q[:28]}...", key=f"history_{i}", use_container_width=True):
+            if st.button(f"📌 {q[:25]}...", key=f"history_{i}", use_container_width=True):
                 st.session_state.search_query = q
                 st.rerun()
     else:
-        st.markdown('<div style="text-align: center; color: #64748b; padding: 1rem;">No history yet</div>',
+        st.markdown('<small style="color: #cbd5e0; text-align: center; display: block;">No history yet</small>',
                    unsafe_allow_html=True)
 
+    st.markdown("---")
+    st.markdown(f"""
+    <div style="text-align: center; color: #64748b; font-size: 0.8rem; margin-top: 2rem;">
+        <p>RAG-Lines v1.2.0</p>
+        <p>API: {API_BASE}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "search"
+
 with st.container():
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([1, 3, 1])
     with col2:
         st.markdown("""
             <div class="header-premium">
-                <h1>✨ RAG-Lines</h1>
-                <p>Enterprise-Grade Intelligent Document Retrieval & AI Search</p>
+                <h1 style="font-size: 2.5rem; margin-bottom: 0.3rem;">✨ RAG-Lines</h1>
+                <p style="font-size: 0.95rem;">Enterprise-Grade Intelligent Document Retrieval & AI Search</p>
             </div>
         """, unsafe_allow_html=True)
+
+if st.session_state.current_page == "search":
+    tab_key = 0
+elif st.session_state.current_page == "batch":
+    tab_key = 1
+elif st.session_state.current_page == "scheduled":
+    tab_key = 2
+elif st.session_state.current_page == "documents":
+    tab_key = 3
+else:
+    tab_key = 0
 
 tab1, tab2, tab3, tab4 = st.tabs(["🔍 Smart Search", "📋 Batch Processing", "⏰ Schedule", "📤 Documents"])
 
