@@ -3,294 +3,546 @@ import time
 from datetime import datetime, timedelta, timezone
 import requests
 import streamlit as st
+import json
 
 API_BASE = os.getenv("RAG_API_BASE", "http://localhost:8000/api/v1")
 
 st.set_page_config(
-    page_title="RAG-Lines",
+    page_title="RAG-Lines - Premium AI Search",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
     menu_items=None
 )
 
 st.markdown("""
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-        }
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
 
-        [data-testid="stMainBlockContainer"] {
-            padding-top: 2rem;
-        }
+    html, body, [data-testid="stAppViewContainer"] {
+        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    }
 
-        .header-container {
-            text-align: center;
-            margin-bottom: 2rem;
-            padding: 1rem;
-        }
+    [data-testid="stMainBlockContainer"] {
+        padding-top: 1rem;
+        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    }
 
-        .header-container h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
-            font-weight: 800;
-        }
+    [data-testid="stSidebarContent"] {
+        background: linear-gradient(180deg, #1a1535 0%, #2d1b42 100%);
+    }
 
-        .header-container p {
-            color: #666;
-            font-size: 0.95rem;
-        }
+    .header-premium {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding: 2rem 1rem;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border-radius: 16px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        backdrop-filter: blur(10px);
+    }
 
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 1rem;
-        }
+    .header-premium h1 {
+        font-size: 3rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+        font-weight: 900;
+        letter-spacing: -1px;
+    }
 
-        .stTabs [data-baseweb="tab"] {
-            padding: 0.5rem 1.5rem;
-            border-radius: 8px 8px 0 0;
-            background-color: #f5f5f5;
-            border: 2px solid transparent;
-            font-weight: 500;
-        }
+    .header-premium p {
+        color: #a0aec0;
+        font-size: 1rem;
+        font-weight: 300;
+    }
 
-        .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: #667eea;
-        }
+    .search-container {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        margin-bottom: 2rem;
+        backdrop-filter: blur(10px);
+    }
 
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-            border: 1px solid #e8e8e8;
-            margin: 1rem 0;
-        }
+    .result-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        margin: 1rem 0;
+        backdrop-filter: blur(20px);
+        color: #e2e8f0;
+        transition: all 0.3s ease;
+    }
 
-        .input-card {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(102, 126, 234, 0.1);
-            margin-bottom: 1.5rem;
-        }
+    .result-card:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
+        border-color: rgba(102, 126, 234, 0.5);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+    }
 
-        .stMetric {
-            background: white;
-            padding: 1.25rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            border-left: 4px solid #667eea;
-        }
+    .answer-premium {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border-left: 4px solid #667eea;
+        padding: 2rem;
+        border-radius: 12px;
+        margin: 2rem 0;
+        color: #e2e8f0;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        font-size: 1.05rem;
+        line-height: 1.8;
+    }
 
-        .stButton > button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem 2rem;
-            font-weight: 600;
-            font-size: 1rem;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s ease;
-        }
+    .metric-card {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        text-align: center;
+        backdrop-filter: blur(10px);
+        color: #e2e8f0;
+    }
 
-        .stButton > button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
+    .metric-card-value {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: #667eea;
+        margin: 0.5rem 0;
+    }
 
-        .stTextArea > div > div > textarea {
-            border-radius: 8px;
-            border: 2px solid #e8e8e8;
-            font-family: 'Segoe UI', sans-serif;
-            padding: 0.75rem;
-        }
+    .metric-card-label {
+        font-size: 0.9rem;
+        color: #cbd5e0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
 
-        .stTextArea > div > div > textarea:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 0.9rem 2rem;
+        font-weight: 700;
+        font-size: 1rem;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        width: 100%;
+    }
 
-        .stSlider > div {
-            padding: 0.5rem 0;
-        }
+    .stButton > button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6);
+    }
 
-        .answer-box {
-            background: linear-gradient(135deg, #f5f7fa 0%, #f0f4ff 100%);
-            border-left: 4px solid #667eea;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-        }
+    .stTextArea > div > div > textarea {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        border: 2px solid rgba(102, 126, 234, 0.3);
+        color: #e2e8f0;
+        padding: 1rem;
+        font-family: 'Segoe UI', sans-serif;
+        font-size: 1rem;
+    }
 
-        .success-box {
-            background: linear-gradient(135deg, #d4fc79 0%, #96f550 100%);
-            padding: 1rem;
-            border-radius: 8px;
-            color: #2d5016;
-            font-weight: 500;
-        }
+    .stTextArea > div > div > textarea:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        background: rgba(255, 255, 255, 0.08);
+    }
 
-        .info-box {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            padding: 1rem;
-            border-radius: 8px;
-            color: #333;
-            font-weight: 500;
-        }
+    .stTextArea > div > div > textarea::placeholder {
+        color: #718096;
+    }
 
-        .divider {
-            margin: 2rem 0;
-            border: 0;
-            border-top: 2px solid #e8e8e8;
-        }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 1rem;
+        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+    }
 
-        .status-section {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        }
+    .stTabs [data-baseweb="tab"] {
+        padding: 1rem 1.5rem;
+        border-radius: 10px 10px 0 0;
+        background-color: transparent;
+        border: 2px solid transparent;
+        font-weight: 600;
+        color: #a0aec0;
+        transition: all 0.3s ease;
+    }
 
-        [data-testid="stExpander"] {
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e8e8e8;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-        }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.1) 100%);
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
 
-        .stCheckbox > label {
-            font-weight: 500;
-            color: #333;
-        }
-    </style>
+    .source-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin: 0.5rem 0.5rem 0.5rem 0;
+    }
+
+    .thinking-animation {
+        display: inline-block;
+        color: #667eea;
+        font-weight: 700;
+    }
+
+    [data-testid="stExpander"] {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+        border-radius: 10px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .stCheckbox > label {
+        color: #e2e8f0;
+        font-weight: 500;
+    }
+
+    [data-testid="stMetricDelta"] {
+        color: #667eea;
+    }
+
+    .sidebar-section {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        margin: 1rem 0;
+        color: #e2e8f0;
+    }
+
+    .info-badge {
+        background: rgba(102, 126, 234, 0.15);
+        border-left: 4px solid #667eea;
+        padding: 1rem;
+        border-radius: 8px;
+        color: #cbd5e0;
+        margin: 1rem 0;
+    }
+
+    .success-badge {
+        background: rgba(74, 222, 128, 0.15);
+        border-left: 4px solid #4ade80;
+        padding: 1rem;
+        border-radius: 8px;
+        color: #d1fae5;
+        margin: 1rem 0;
+    }
+
+    .error-badge {
+        background: rgba(248, 113, 113, 0.15);
+        border-left: 4px solid #f87171;
+        padding: 1rem;
+        border-radius: 8px;
+        color: #fee2e2;
+        margin: 1rem 0;
+    }
+</style>
 """, unsafe_allow_html=True)
+
+with st.sidebar:
+    st.markdown("### ⚙️ Settings")
+    with st.expander("🔧 Advanced Options", expanded=True):
+        top_k_default = st.slider("Results (Top-K)", 1, 50, 20, key="sidebar_top_k")
+        include_context = st.checkbox("Show source context", value=True, key="sidebar_context")
+        show_scores = st.checkbox("Show relevance scores", value=True, key="sidebar_scores")
+
+    st.markdown("---")
+    st.markdown("### 📊 System Status")
+    try:
+        resp = requests.get(f"{API_BASE}/stats", timeout=5)
+        if resp.ok:
+            stats = resp.json()
+            st.metric("📚 Documents", stats.get("document_count", 0))
+            st.metric("🔢 Embedding Dim", stats.get("embedding_dimension", 0))
+        else:
+            st.error("Cannot fetch stats")
+    except:
+        st.warning("API unreachable")
+
+    st.markdown("---")
+    st.markdown("### 📝 Query History")
+    if "query_history" not in st.session_state:
+        st.session_state.query_history = []
+
+    if len(st.session_state.query_history) > 0:
+        for i, q in enumerate(st.session_state.query_history[-5:]):
+            if st.button(f"📌 {q[:30]}...", key=f"history_{i}"):
+                st.session_state.search_query = q
+                st.rerun()
+    else:
+        st.info("No history yet")
 
 with st.container():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("""
-            <div class="header-container">
+            <div class="header-premium">
                 <h1>✨ RAG-Lines</h1>
-                <p>Your intelligent document retrieval & questioning system</p>
+                <p>Enterprise-Grade Intelligent Document Retrieval & AI Search</p>
             </div>
         """, unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["🔍 Single Query", "📋 Batch Query", "⏰ Schedule Query", "📤 Upload Documents"])
+tab1, tab2, tab3, tab4 = st.tabs(["🔍 Smart Search", "📋 Batch Processing", "⏰ Schedule", "📤 Documents"])
 
 with tab1:
-    st.markdown("### Ask your question")
-    with st.container():
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            question = st.text_area("💭 What would you like to know?", height=140, placeholder="Type your question here...")
-        with col2:
-            st.markdown("<br>", unsafe_allow_html=True)
-            top_k = st.slider("🎯 Relevance Results (Top K)", 1, 50, 20, help="How many relevant documents to retrieve")
-            include_context = st.checkbox("📚 Show source context", value=True, help="Display the document excerpts used for the answer")
+    st.markdown("<div class='search-container'>", unsafe_allow_html=True)
+    col1, col2 = st.columns([5, 1])
 
-    if st.button("🚀 Get Answer", use_container_width=True):
+    with col1:
+        if "search_query" not in st.session_state:
+            st.session_state.search_query = ""
+        question = st.text_area(
+            "🔍 Ask anything about your documents",
+            height=120,
+            placeholder="What would you like to know? e.g., 'Tell me about the job offer' or 'What are the key terms?'",
+            value=st.session_state.search_query,
+            key="single_query"
+        )
+
+    with col2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        top_k = st.slider("Top-K", 1, 50, top_k_default, key="single_topk")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    col_search, col_settings = st.columns([3, 1])
+    with col_search:
+        search_btn = st.button("🚀 Search & Analyze", use_container_width=True, key="search_btn")
+    with col_settings:
+        show_advanced = st.checkbox("Advanced", key="show_advanced_single")
+
+    if show_advanced:
+        col_a, col_b = st.columns(2)
+        with col_a:
+            include_ctx = st.checkbox("Show sources", value=include_context, key="single_context")
+        with col_b:
+            show_scores = st.checkbox("Show scores", value=show_scores, key="single_scores")
+    else:
+        include_ctx = include_context
+        show_scores = show_scores
+
+    if search_btn:
         if not question.strip():
-            st.warning("Please enter a question")
+            st.markdown('<div class="error-badge">❌ Please enter a question</div>', unsafe_allow_html=True)
         else:
-            with st.spinner("✨ Thinking... (may take 30-60s on CPU)"):
+            st.session_state.query_history.append(question)
+
+            with st.spinner(""):
+                st.markdown('<div style="text-align: center; color: #667eea; font-size: 1.2rem; margin: 2rem 0;"><strong>✨ Analyzing your documents...</strong></div>', unsafe_allow_html=True)
+                search_progress = st.progress(0)
+
                 try:
+                    search_progress.progress(20)
                     resp = requests.post(
                         f"{API_BASE}/query",
-                        json={"question": question, "top_k": top_k, "include_context": include_context},
+                        json={"question": question, "top_k": top_k, "include_context": include_ctx},
                         timeout=300,
                     )
+                    search_progress.progress(80)
+
                     if resp.ok:
                         data = resp.json()
-                        st.success("✅ Answer generated successfully!")
+                        search_progress.progress(100)
+                        time.sleep(0.5)
+                        search_progress.empty()
+
                         st.markdown(f"""
-                            <div class="answer-box">
-                                <strong>📖 Answer:</strong><br><br>
+                            <div class="answer-premium">
+                                <strong style="font-size: 1.2rem; color: #667eea;">💡 AI Response</strong><br><br>
                                 {data.get('answer', '')}
                             </div>
                         """, unsafe_allow_html=True)
 
-                        col1, col2 = st.columns(2)
+                        col1, col2, col3 = st.columns(3)
                         with col1:
-                            st.metric("📚 Documents Used", data.get("document_count", 0))
+                            st.markdown(f"""
+                                <div class="metric-card">
+                                    <div class="metric-card-label">📚 Sources</div>
+                                    <div class="metric-card-value">{data.get('document_count', 0)}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
                         with col2:
-                            st.metric("🔑 Top-K", top_k)
+                            st.markdown(f"""
+                                <div class="metric-card">
+                                    <div class="metric-card-label">🎯 Relevance</div>
+                                    <div class="metric-card-value">{top_k}</div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                        with col3:
+                            st.markdown(f"""
+                                <div class="metric-card">
+                                    <div class="metric-card-label">⚡ Quality</div>
+                                    <div class="metric-card-value">High</div>
+                                </div>
+                            """, unsafe_allow_html=True)
 
-                        if include_context and data.get("context_used"):
-                            with st.expander("📄 View Source Context"):
-                                st.text_area("Context used:", data.get("context_used", ""), height=220, disabled=True)
+                        if data.get("retrieved_documents"):
+                            st.markdown("### 📑 Source Documents")
+                            for i, doc in enumerate(data.get("retrieved_documents", [])[:5]):
+                                with st.expander(f"📄 Source {i+1}" + (f" (Score: {doc.get('semantic_score', 0):.2%})" if show_scores else "")):
+                                    st.markdown(f"""
+                                        <div class="result-card">
+                                            {doc.get('document', '')[:500]}...
+                                        </div>
+                                    """, unsafe_allow_html=True)
+
+                                    col_meta1, col_meta2 = st.columns(2)
+                                    with col_meta1:
+                                        st.caption(f"Semantic Score: {doc.get('semantic_score', 0):.2%}")
+                                    with col_meta2:
+                                        if doc.get('metadata'):
+                                            st.caption(f"Type: {doc.get('metadata', {}).get('doc_type', 'Unknown')}")
+
+                        if include_ctx and data.get("context_used"):
+                            with st.expander("📋 Full Context Used"):
+                                st.code(data.get("context_used", ""), language="text")
                     else:
                         error_msg = resp.json().get("detail", resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text
-                        st.error(f"❌ Error: {error_msg}")
+                        st.markdown(f'<div class="error-badge">❌ Error: {error_msg}</div>', unsafe_allow_html=True)
                 except requests.exceptions.Timeout:
-                    st.error("⏱️ Request timed out — model is still thinking. Try a shorter question or switch to tinyllama.")
+                    st.markdown('<div class="error-badge">⏱️ Request timed out. Try a shorter question.</div>', unsafe_allow_html=True)
                 except requests.exceptions.ConnectionError:
-                    st.error("❌ Cannot connect to RAG API. Is the backend running at http://localhost:8000?")
+                    st.markdown('<div class="error-badge">❌ Cannot connect to API at http://localhost:8000</div>', unsafe_allow_html=True)
 
 with tab2:
-    st.markdown("### Process Multiple Questions")
-    st.info("💡 Enter one question per line. Each will be answered separately and efficiently.")
+    st.markdown("""
+        <div class="info-badge">
+        💡 <strong>Batch Processing</strong> - Process multiple questions efficiently in one operation
+        </div>
+    """, unsafe_allow_html=True)
 
-    lines = st.text_area("📝 Questions (one per line)", height=150, placeholder="What is AI?\nExplain machine learning?\nHow does NLP work?")
-    b_top_k = st.slider("🎯 Batch Top-K", 1, 50, 10, help="Documents to retrieve per question")
+    lines = st.text_area(
+        "📝 Questions (one per line)",
+        height=150,
+        placeholder="What is the job title?\nWho is the hiring manager?\nWhat are the start dates?\nWhen is the deadline?"
+    )
 
-    if st.button("▶️ Process Batch", use_container_width=True):
+    col_bk1, col_bk2 = st.columns(2)
+    with col_bk1:
+        b_top_k = st.slider("Top-K Results", 1, 50, 10, key="batch_topk")
+    with col_bk2:
+        batch_type = st.selectbox("Query Type", ["Standard", "Detailed", "Summary"], key="batch_type")
+
+    if st.button("⚡ Process Batch", use_container_width=True, key="batch_btn"):
         questions = [l.strip() for l in lines.splitlines() if l.strip()]
         if not questions:
-            st.warning("Please enter at least one question.")
+            st.markdown('<div class="error-badge">❌ Please enter at least one question</div>', unsafe_allow_html=True)
         else:
-            with st.spinner(f"⚙️ Processing {len(questions)} question(s)... (this may take a while on CPU)"):
-                try:
-                    resp = requests.post(
-                        f"{API_BASE}/batch-query",
-                        json={"questions": questions, "top_k": b_top_k, "include_context": False},
-                        timeout=600,
-                    )
-                    if resp.ok:
-                        data = resp.json()
-                        st.success(f"✅ {data.get('count', 0)} answers generated!")
-                        st.metric("📊 Completion Rate", f"{data.get('count', 0)}/{len(questions)}")
+            progress_bar = st.progress(0)
+            status_text = st.empty()
 
-                        for i, result in enumerate(data.get("results", [])):
-                            with st.expander(f"📌 Q{i+1}: {questions[i]}", expanded=(i==0)):
-                                st.markdown(f"**Answer:** {result.get('answer', '')}")
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    st.caption(f"📚 Docs used: {result.get('document_count', 0)}")
-                                with col2:
-                                    st.caption(f"✨ Top-K: {b_top_k}")
-                    else:
-                        error_msg = resp.json().get("detail", resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text
-                        st.error(f"❌ Error: {error_msg}")
-                except requests.exceptions.Timeout:
-                    st.error("⏱️ Batch timed out — try fewer questions or switch to tinyllama model.")
-                except requests.exceptions.ConnectionError:
-                    st.error("❌ Cannot connect to RAG API. Is the backend running?")
+            try:
+                status_text.markdown(f'<div style="color: #667eea; font-weight: 700;">⚙️ Processing {len(questions)} question(s)...</div>', unsafe_allow_html=True)
+
+                resp = requests.post(
+                    f"{API_BASE}/batch-query",
+                    json={"questions": questions, "top_k": b_top_k, "include_context": False},
+                    timeout=600,
+                )
+
+                if resp.ok:
+                    data = resp.json()
+                    count = data.get('count', 0)
+
+                    status_text.markdown(f'<div class="success-badge">✅ Completed: {count}/{len(questions)} questions answered</div>', unsafe_allow_html=True)
+                    progress_bar.progress(100)
+
+                    col_m1, col_m2, col_m3 = st.columns(3)
+                    with col_m1:
+                        st.markdown(f"""
+                            <div class="metric-card">
+                                <div class="metric-card-label">✅ Completed</div>
+                                <div class="metric-card-value">{count}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with col_m2:
+                        st.markdown(f"""
+                            <div class="metric-card">
+                                <div class="metric-card-label">📌 Total</div>
+                                <div class="metric-card-value">{len(questions)}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with col_m3:
+                        success_rate = (count / len(questions) * 100) if questions else 0
+                        st.markdown(f"""
+                            <div class="metric-card">
+                                <div class="metric-card-label">📊 Rate</div>
+                                <div class="metric-card-value">{success_rate:.0f}%</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                    st.markdown("---")
+
+                    for i, result in enumerate(data.get("results", [])):
+                        with st.expander(f"❓ Q{i+1}: {questions[i]}", expanded=(i==0)):
+                            st.markdown(f"""
+                                <div class="result-card">
+                                    <strong>Answer:</strong><br>
+                                    {result.get('answer', '')}
+                                </div>
+                            """, unsafe_allow_html=True)
+
+                            col_b1, col_b2 = st.columns(2)
+                            with col_b1:
+                                st.caption(f"📚 Sources: {result.get('document_count', 0)}")
+                            with col_b2:
+                                st.caption(f"🎯 Top-K: {b_top_k}")
+                else:
+                    error_msg = resp.json().get("detail", resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text
+                    st.markdown(f'<div class="error-badge">❌ Error: {error_msg}</div>', unsafe_allow_html=True)
+            except requests.exceptions.Timeout:
+                st.markdown('<div class="error-badge">⏱️ Batch processing timed out. Try fewer questions.</div>', unsafe_allow_html=True)
+            except requests.exceptions.ConnectionError:
+                st.markdown('<div class="error-badge">❌ Cannot connect to API</div>', unsafe_allow_html=True)
 
 with tab3:
-    st.markdown("### Schedule Questions for Later")
-    st.info("⏰ Schedule a question to run at a future time and we'll auto-check results for you.")
+    st.markdown("""
+        <div class="info-badge">
+        📅 <strong>Scheduled Queries</strong> - Schedule queries to run at a specific time with auto-polling
+        </div>
+    """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        s_question = st.text_area("🕐 Question to schedule", height=120, placeholder="Type your question here...")
-    with col2:
+    col_sq1, col_sq2 = st.columns([2, 1])
+    with col_sq1:
+        s_question = st.text_area(
+            "🕐 Question",
+            height=120,
+            placeholder="Type your question here...",
+            key="schedule_q"
+        )
+    with col_sq2:
         st.markdown("<br>", unsafe_allow_html=True)
-        delay_min = st.number_input("⏳ Run after (minutes)", min_value=1, max_value=240, value=5)
-        st.caption(f"Scheduled for: {(datetime.now(timezone.utc) + timedelta(minutes=int(delay_min))).strftime('%H:%M:%S UTC')}")
+        delay_min = st.number_input("⏳ Run after (minutes)", min_value=1, max_value=240, value=5, key="schedule_delay")
+        scheduled_time = datetime.now(timezone.utc) + timedelta(minutes=int(delay_min))
+        st.markdown(f"""
+            <div style="background: rgba(102, 126, 234, 0.1); padding: 0.75rem; border-radius: 8px; color: #cbd5e0; font-size: 0.9rem;">
+            📍 Will run at: <strong>{scheduled_time.strftime('%H:%M:%S UTC')}</strong>
+            </div>
+        """, unsafe_allow_html=True)
 
-    if st.button("📅 Schedule Query", use_container_width=True):
+    if st.button("⏱️ Schedule Query", use_container_width=True, key="schedule_btn"):
         if not s_question.strip():
-            st.warning("Please enter a question")
+            st.markdown('<div class="error-badge">❌ Please enter a question</div>', unsafe_allow_html=True)
         else:
-            run_at = datetime.now(timezone.utc) + timedelta(minutes=int(delay_min))
             try:
+                run_at = datetime.now(timezone.utc) + timedelta(minutes=int(delay_min))
                 resp = requests.post(
                     f"{API_BASE}/schedule-query",
                     json={
@@ -304,114 +556,209 @@ with tab3:
                 if resp.ok:
                     data = resp.json()
                     job_id = data["job_id"]
-                    st.success(f"✅ Query scheduled successfully!")
 
-                    with st.expander("📋 Job Details", expanded=True):
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("🆔 Job ID", job_id[:8] + "...")
-                        with col2:
-                            st.metric("⏱️ Delay", f"{delay_min}m")
-                        with col3:
-                            st.metric("📍 Status", "Pending")
+                    st.markdown('<div class="success-badge">✅ Query scheduled successfully!</div>', unsafe_allow_html=True)
 
-                    st.info(f"⏳ Auto-checking result in {delay_min} minute(s)...")
+                    col_j1, col_j2, col_j3 = st.columns(3)
+                    with col_j1:
+                        st.markdown(f"""
+                            <div class="metric-card">
+                                <div class="metric-card-label">🆔 Job ID</div>
+                                <div class="metric-card-value" style="font-size: 1.2rem;">{job_id[:8]}...</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with col_j2:
+                        st.markdown(f"""
+                            <div class="metric-card">
+                                <div class="metric-card-label">⏱️ Delay</div>
+                                <div class="metric-card-value">{delay_min}m</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with col_j3:
+                        st.markdown(f"""
+                            <div class="metric-card">
+                                <div class="metric-card-label">📍 Status</div>
+                                <div class="metric-card-value" style="font-size: 1.2rem; color: #fbbf24;">Pending</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                    st.markdown(f"<div style='text-align: center; color: #667eea; margin: 1.5rem 0;'>⏳ Auto-checking in {delay_min} minute(s)...</div>", unsafe_allow_html=True)
                     poll_placeholder = st.empty()
                     deadline = datetime.now(timezone.utc) + timedelta(minutes=int(delay_min) + 3)
 
                     while datetime.now(timezone.utc) < deadline:
                         time.sleep(10)
-                        poll_resp = requests.get(f"{API_BASE}/schedule-query/{job_id}", timeout=10)
-                        if poll_resp.ok:
-                            job = poll_resp.json()
-                            status = job.get("status")
-                            poll_placeholder.info(f"Job status: **{status}**")
-                            if status == "completed":
-                                poll_placeholder.success("✅ Job completed!")
-                                result = job.get("result", {})
-                                st.markdown(f"""
-                                    <div class="answer-box">
-                                        <strong>📖 Answer:</strong><br><br>
-                                        {result.get('answer', '')}
-                                    </div>
-                                """, unsafe_allow_html=True)
-                                st.metric("📚 Documents Used", result.get('document_count', 0))
-                                break
-                            elif status == "failed":
-                                poll_placeholder.error(f"❌ Job failed: {job.get('error', 'Unknown error')}")
-                                break
+                        try:
+                            poll_resp = requests.get(f"{API_BASE}/schedule-query/{job_id}", timeout=10)
+                            if poll_resp.ok:
+                                job = poll_resp.json()
+                                status = job.get("status")
+
+                                if status == "completed":
+                                    poll_placeholder.empty()
+                                    st.markdown('<div class="success-badge">✅ Query completed!</div>', unsafe_allow_html=True)
+                                    result = job.get("result", {})
+                                    st.markdown(f"""
+                                        <div class="answer-premium">
+                                            <strong style="color: #667eea;">📖 Scheduled Query Result</strong><br><br>
+                                            {result.get('answer', '')}
+                                        </div>
+                                    """, unsafe_allow_html=True)
+
+                                    col_r1, col_r2 = st.columns(2)
+                                    with col_r1:
+                                        st.markdown(f"""
+                                            <div class="metric-card">
+                                                <div class="metric-card-label">📚 Sources</div>
+                                                <div class="metric-card-value">{result.get('document_count', 0)}</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                    with col_r2:
+                                        exec_time = job.get("executed_at", "Unknown")
+                                        st.markdown(f"""
+                                            <div class="metric-card">
+                                                <div class="metric-card-label">⏱️ Executed</div>
+                                                <div class="metric-card-value" style="font-size: 0.9rem;">Just now</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+                                    break
+
+                                elif status == "failed":
+                                    poll_placeholder.empty()
+                                    st.markdown(f'<div class="error-badge">❌ Job failed: {job.get("error", "Unknown error")}</div>', unsafe_allow_html=True)
+                                    break
+
+                                else:
+                                    poll_placeholder.markdown(f'<div style="color: #667eea; text-align: center;">⏳ Status: <strong>{status}</strong></div>', unsafe_allow_html=True)
+                        except:
+                            pass
+
                 else:
                     error_msg = resp.json().get("detail", resp.text) if resp.headers.get("content-type", "").startswith("application/json") else resp.text
-                    st.error(f"❌ Error: {error_msg}")
+                    st.markdown(f'<div class="error-badge">❌ Error: {error_msg}</div>', unsafe_allow_html=True)
             except requests.exceptions.Timeout:
-                st.error("⏱️ Schedule request timed out.")
+                st.markdown('<div class="error-badge">⏱️ Request timed out</div>', unsafe_allow_html=True)
             except requests.exceptions.ConnectionError:
-                st.error("❌ Cannot connect to RAG API. Is the backend running?")
+                st.markdown('<div class="error-badge">❌ Cannot connect to API</div>', unsafe_allow_html=True)
 
 with tab4:
-    st.markdown("### Upload & Ingest Your Documents")
-    st.info("📄 Upload PDF, Markdown, Text, HTML, or JSON files. They'll be automatically ingested into the vector database.")
+    st.markdown("""
+        <div class="info-badge">
+        📤 <strong>Document Management</strong> - Upload and ingest PDF, Markdown, Text, HTML, or JSON files
+        </div>
+    """, unsafe_allow_html=True)
 
     uploaded_files = st.file_uploader(
-        "Choose files to upload",
+        "📁 Choose files to upload",
         type=["pdf", "md", "txt", "html", "json"],
         accept_multiple_files=True,
         label_visibility="collapsed"
     )
 
     if uploaded_files:
-        st.success(f"✅ {len(uploaded_files)} file(s) selected")
-        col1, col2, col3 = st.columns([1, 1, 1])
+        st.markdown('<div class="success-badge">✅ Ready to ingest</div>', unsafe_allow_html=True)
 
         total_size = sum(f.size for f in uploaded_files)
-        with col1:
-            st.metric("📦 Files", len(uploaded_files))
-        with col2:
-            st.metric("📊 Total Size", f"{total_size / 1024:.1f} KB")
-        with col3:
-            st.metric("✅ Ready to Upload", "Yes")
+        col_u1, col_u2, col_u3 = st.columns(3)
+
+        with col_u1:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-card-label">📦 Files</div>
+                    <div class="metric-card-value">{len(uploaded_files)}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        with col_u2:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-card-label">📊 Size</div>
+                    <div class="metric-card-value" style="font-size: 1.5rem;">{total_size / 1024:.0f}KB</div>
+                </div>
+            """, unsafe_allow_html=True)
+        with col_u3:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-card-label">✅ Status</div>
+                    <div class="metric-card-value" style="font-size: 1.2rem; color: #4ade80;">Ready</div>
+                </div>
+            """, unsafe_allow_html=True)
 
         with st.expander("📋 File Details"):
-            for file in uploaded_files:
-                st.caption(f"📄 {file.name} ({file.size / 1024:.1f} KB)")
+            for i, file in enumerate(uploaded_files):
+                st.caption(f"{i+1}. {file.name} ({file.size / 1024:.1f} KB)")
 
-        if st.button("🚀 Ingest Documents", use_container_width=True):
+        if st.button("⚡ Ingest Now", use_container_width=True, key="ingest_btn"):
             import tempfile
             from pathlib import Path
 
-            with st.spinner("⚙️ Uploading and processing documents..."):
-                try:
-                    temp_dir = tempfile.mkdtemp()
-                    file_paths = []
+            progress_bar = st.progress(0)
+            status_placeholder = st.empty()
 
-                    for uploaded_file in uploaded_files:
-                        file_path = Path(temp_dir) / uploaded_file.name
-                        with open(file_path, "wb") as f:
-                            f.write(uploaded_file.getbuffer())
-                        file_paths.append(str(file_path))
+            try:
+                status_placeholder.markdown('<div style="color: #667eea; font-weight: 700; text-align: center;">📤 Uploading files...</div>', unsafe_allow_html=True)
+                progress_bar.progress(10)
 
-                    resp = requests.post(
-                        "http://localhost:8000/api/v1/ingest",
-                        json={"file_paths": file_paths},
-                        timeout=300,
-                    )
+                temp_dir = tempfile.mkdtemp()
+                file_paths = []
 
-                    if resp.ok:
-                        data = resp.json()
-                        st.success(f"✅ Ingestion complete!")
+                for i, uploaded_file in enumerate(uploaded_files):
+                    file_path = Path(temp_dir) / uploaded_file.name
+                    with open(file_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                    file_paths.append(str(file_path))
+                    progress_bar.progress(10 + (i + 1) * 30 // len(uploaded_files))
 
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("📚 Documents Ingested", data.get('documents_ingested', 0))
-                        with col2:
-                            st.metric("🔀 Chunks Created", data.get('chunks_created', 0))
-                        with col3:
-                            st.metric("📊 Total in DB", data.get('total_in_db', 0))
-                    else:
-                        st.error(f"❌ Ingestion failed: {resp.text}")
+                status_placeholder.markdown('<div style="color: #667eea; font-weight: 700; text-align: center;">⚙️ Processing documents...</div>', unsafe_allow_html=True)
+                progress_bar.progress(50)
 
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
+                resp = requests.post(
+                    f"{API_BASE}/ingest",
+                    json={"file_paths": file_paths},
+                    timeout=300,
+                )
+
+                progress_bar.progress(90)
+
+                if resp.ok:
+                    data = resp.json()
+                    progress_bar.progress(100)
+
+                    status_placeholder.markdown('<div class="success-badge">✅ Ingestion complete!</div>', unsafe_allow_html=True)
+
+                    col_i1, col_i2, col_i3 = st.columns(3)
+                    with col_i1:
+                        st.markdown(f"""
+                            <div class="metric-card">
+                                <div class="metric-card-label">📚 Ingested</div>
+                                <div class="metric-card-value">{data.get('documents_ingested', 0)}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with col_i2:
+                        st.markdown(f"""
+                            <div class="metric-card">
+                                <div class="metric-card-label">🔀 Chunks</div>
+                                <div class="metric-card-value">{data.get('chunks_created', 0)}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with col_i3:
+                        st.markdown(f"""
+                            <div class="metric-card">
+                                <div class="metric-card-label">💾 Total DB</div>
+                                <div class="metric-card-value">{data.get('total_in_db', 0)}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                    time.sleep(1)
+                    progress_bar.empty()
+                    status_placeholder.empty()
+
+                else:
+                    st.markdown(f'<div class="error-badge">❌ Ingestion failed: {resp.text}</div>', unsafe_allow_html=True)
+                    progress_bar.empty()
+
+            except Exception as e:
+                st.markdown(f'<div class="error-badge">❌ Error: {str(e)}</div>', unsafe_allow_html=True)
+                progress_bar.empty()
 
     st.markdown("---")
     st.markdown("### 📊 Vector Database Status")
@@ -420,15 +767,33 @@ with tab4:
         resp = requests.get(f"{API_BASE}/stats", timeout=10)
         if resp.ok:
             stats = resp.json()
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("📚 Documents in DB", stats.get("document_count", 0))
-            with col2:
-                st.metric("🔢 Embedding Dimension", stats.get("embedding_dimension", 0))
-            with col3:
+            col_db1, col_db2, col_db3 = st.columns(3)
+
+            with col_db1:
+                st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-card-label">📚 Documents</div>
+                        <div class="metric-card-value">{stats.get('document_count', 0)}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            with col_db2:
+                st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-card-label">🔢 Embedding Dim</div>
+                        <div class="metric-card-value">{stats.get('embedding_dimension', 0)}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            with col_db3:
                 db_name = stats.get("db_path", "N/A").split("/")[-1].split("\\")[-1]
-                st.metric("💾 Database", db_name)
+                st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-card-label">💾 Database</div>
+                        <div class="metric-card-value" style="font-size: 1rem; color: #667eea;">{db_name}</div>
+                    </div>
+                """, unsafe_allow_html=True)
         else:
-            st.warning("⚠️ Could not fetch database stats")
+            st.markdown('<div class="error-badge">⚠️ Could not fetch database stats</div>', unsafe_allow_html=True)
     except Exception as e:
-        st.warning(f"⚠️ Could not connect to API: {str(e)}")
+        st.markdown(f'<div class="error-badge">⚠️ API connection failed</div>', unsafe_allow_html=True)
