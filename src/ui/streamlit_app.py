@@ -420,20 +420,11 @@ with st.container():
             </div>
         """, unsafe_allow_html=True)
 
+st.markdown("---")
+
+# Smart Search Page
 if st.session_state.current_page == "search":
-    tab_key = 0
-elif st.session_state.current_page == "batch":
-    tab_key = 1
-elif st.session_state.current_page == "scheduled":
-    tab_key = 2
-elif st.session_state.current_page == "documents":
-    tab_key = 3
-else:
-    tab_key = 0
-
-tab1, tab2, tab3, tab4 = st.tabs(["🔍 Smart Search", "📋 Batch Processing", "⏰ Schedule", "📤 Documents"])
-
-with tab1:
+    st.markdown("### 🔍 Smart Search - Ask Your Documents")
     st.markdown("<div class='search-container'>", unsafe_allow_html=True)
     col1, col2 = st.columns([5, 1])
 
@@ -526,21 +517,83 @@ with tab1:
                             """, unsafe_allow_html=True)
 
                         if data.get("retrieved_documents"):
-                            st.markdown("### 📑 Source Documents")
-                            for i, doc in enumerate(data.get("retrieved_documents", [])[:5]):
-                                with st.expander(f"📄 Source {i+1}" + (f" (Score: {doc.get('semantic_score', 0):.2%})" if show_scores else "")):
-                                    st.markdown(f"""
-                                        <div class="result-card">
-                                            {doc.get('document', '')[:500]}...
-                                        </div>
-                                    """, unsafe_allow_html=True)
+                            st.markdown("### 📑 Source Documents & Context")
 
-                                    col_meta1, col_meta2 = st.columns(2)
-                                    with col_meta1:
-                                        st.caption(f"Semantic Score: {doc.get('semantic_score', 0):.2%}")
-                                    with col_meta2:
-                                        if doc.get('metadata'):
-                                            st.caption(f"Type: {doc.get('metadata', {}).get('doc_type', 'Unknown')}")
+                            for i, doc in enumerate(data.get("retrieved_documents", [])[:10]):
+                                semantic_score = doc.get('semantic_score', 0)
+                                bm25_score = doc.get('bm25_score', 0)
+                                reranker_score = doc.get('reranker_score', 0)
+                                metadata = doc.get('metadata', {})
+                                doc_type = metadata.get('doc_type', 'Unknown')
+                                page_num = metadata.get('pages', 'N/A')
+
+                                score_color = "#10b981" if semantic_score > 0.5 else "#f59e0b" if semantic_score > 0.3 else "#ef4444"
+
+                                with st.expander(f"📄 **Source {i+1}** | {doc_type.upper()} | Score: {semantic_score:.1%}", expanded=(i==0)):
+                                    col_src1, col_src2 = st.columns([1, 4])
+
+                                    with col_src1:
+                                        st.markdown(f"""
+                                            <div style="background: {score_color}20; border-left: 4px solid {score_color}; padding: 1rem; border-radius: 8px;">
+                                                <div style="font-size: 2rem; font-weight: 900; color: {score_color};">{semantic_score:.0%}</div>
+                                                <div style="color: {score_color}; font-weight: 700; font-size: 0.8rem;">RELEVANCE</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+
+                                    with col_src2:
+                                        # Extract text snippet
+                                        doc_text = doc.get('document', '')[:600]
+                                        st.markdown(f"""
+                                            <div class="result-card">
+                                                <div style="color: #0891b2; font-weight: 700; margin-bottom: 0.5rem;">📖 Extracted Text:</div>
+                                                {doc_text}...
+                                            </div>
+                                        """, unsafe_allow_html=True)
+
+                                    st.markdown("---")
+
+                                    # Metadata and scores
+                                    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+
+                                    with col_m1:
+                                        st.markdown(f"""
+                                            <div style="background: #ecf9ff; border: 2px solid #cffafe; padding: 0.8rem; border-radius: 8px; text-align: center;">
+                                                <div style="color: #0891b2; font-weight: 700; font-size: 1.2rem;">📄</div>
+                                                <div style="color: #0c4a6e; font-size: 0.75rem; font-weight: 700;">Type</div>
+                                                <div style="color: #0891b2; font-weight: 600; font-size: 0.9rem;">{doc_type}</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+
+                                    with col_m2:
+                                        st.markdown(f"""
+                                            <div style="background: #ecf9ff; border: 2px solid #cffafe; padding: 0.8rem; border-radius: 8px; text-align: center;">
+                                                <div style="color: #0891b2; font-weight: 700; font-size: 1.2rem;">📖</div>
+                                                <div style="color: #0c4a6e; font-size: 0.75rem; font-weight: 700;">Page</div>
+                                                <div style="color: #0891b2; font-weight: 600; font-size: 0.9rem;">{page_num}</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+
+                                    with col_m3:
+                                        st.markdown(f"""
+                                            <div style="background: #ecf9ff; border: 2px solid #cffafe; padding: 0.8rem; border-radius: 8px; text-align: center;">
+                                                <div style="color: #0891b2; font-weight: 700; font-size: 1.2rem;">🎯</div>
+                                                <div style="color: #0c4a6e; font-size: 0.75rem; font-weight: 700;">Semantic</div>
+                                                <div style="color: #0891b2; font-weight: 600; font-size: 0.9rem;">{semantic_score:.1%}</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+
+                                    with col_m4:
+                                        st.markdown(f"""
+                                            <div style="background: #ecf9ff; border: 2px solid #cffafe; padding: 0.8rem; border-radius: 8px; text-align: center;">
+                                                <div style="color: #0891b2; font-weight: 700; font-size: 1.2rem;">⚡</div>
+                                                <div style="color: #0c4a6e; font-size: 0.75rem; font-weight: 700;">BM25</div>
+                                                <div style="color: #0891b2; font-weight: 600; font-size: 0.9rem;">{bm25_score:.2f}</div>
+                                            </div>
+                                        """, unsafe_allow_html=True)
+
+                                    # Full context expandable
+                                    with st.expander("📋 Full Context"):
+                                        st.code(doc_text, language="text")
 
                         if include_ctx and data.get("context_used"):
                             with st.expander("📋 Full Context Used"):
@@ -553,7 +606,9 @@ with tab1:
                 except requests.exceptions.ConnectionError:
                     st.markdown('<div class="error-badge">❌ Cannot connect to API at http://localhost:8000</div>', unsafe_allow_html=True)
 
-with tab2:
+# Batch Processing Page
+elif st.session_state.current_page == "batch":
+    st.markdown("### 📋 Batch Processing - Process Multiple Questions")
     st.markdown("""
         <div class="info-badge">
         💡 <strong>Batch Processing</strong> - Process multiple questions efficiently in one operation
@@ -644,7 +699,9 @@ with tab2:
             except requests.exceptions.ConnectionError:
                 st.markdown('<div class="error-badge">❌ Cannot connect to API</div>', unsafe_allow_html=True)
 
-with tab3:
+# Scheduled Queries Page
+elif st.session_state.current_page == "scheduled":
+    st.markdown("### ⏰ Schedule Queries - Run at a Specific Time")
     st.markdown("""
         <div class="info-badge">
         📅 <strong>Scheduled Queries</strong> - Schedule queries to run at a specific time with auto-polling
@@ -773,7 +830,9 @@ with tab3:
             except requests.exceptions.ConnectionError:
                 st.markdown('<div class="error-badge">❌ Cannot connect to API</div>', unsafe_allow_html=True)
 
-with tab4:
+# Document Upload Page
+elif st.session_state.current_page == "documents":
+    st.markdown("### 📤 Upload & Manage Documents")
     st.markdown("""
         <div class="info-badge">
         📤 <strong>Document Management</strong> - Upload and ingest PDF, Markdown, Text, HTML, or JSON files
