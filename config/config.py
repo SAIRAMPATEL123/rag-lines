@@ -7,8 +7,8 @@ class Config(BaseSettings):
     """Application configuration management"""
     
     # LLM Configuration
-    llm_model: str = "mistral"
-    llm_base_url: str = "http://localhost:11434"
+    llm_model: str = "mistral-7b-instruct-v0.1"
+    llm_base_url: str = "http://localhost:1235/v1"
     llm_temperature: float = 0.3
     llm_top_k: int = 40
     llm_top_p: float = 0.9
@@ -26,7 +26,7 @@ class Config(BaseSettings):
     
     # Retrieval Configuration
     retrieval_top_k: int = 20
-    retrieval_score_threshold: float = 0.3
+    retrieval_score_threshold: float = 0.1
     use_reranking: bool = True
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-12-v2"
     
@@ -40,14 +40,21 @@ class Config(BaseSettings):
     supported_formats: list = [".pdf", ".md", ".txt", ".html", ".json"]
     
     # Database Configuration
-    db_type: str = "sqlite"
-    db_connection_string: str = "sqlite:///./data/app.db"
+    db_type: str = "mysql"
+    db_host: str = "localhost"
+    db_port: int = 3306
+    db_user: str = "root"
+    db_password: str = "password"
+    db_name: str = "rag_lines"
+    db_connection_string: str = "mysql+pymysql://root:password@localhost:3306/rag_lines"
     
     # API Configuration
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_debug: bool = False
-    
+    api_rate_limit_per_minute: int = 100
+    scheduled_jobs_dir: str = "./data/scheduled_jobs"
+
     # Logging
     log_level: str = "INFO"
     log_file: str = "./logs/rag-system.log"
