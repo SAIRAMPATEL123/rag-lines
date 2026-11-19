@@ -22,242 +22,248 @@ st.markdown("""
     }
 
     html, body, [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     }
 
     [data-testid="stMainBlockContainer"] {
         padding-top: 1rem;
-        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     }
 
     [data-testid="stSidebarContent"] {
-        background: linear-gradient(180deg, #1a1535 0%, #2d1b42 100%);
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border-right: 2px solid #e2e8f0;
     }
 
     .header-premium {
         text-align: center;
         margin-bottom: 2rem;
-        padding: 2rem 1rem;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-        border-radius: 16px;
-        border: 1px solid rgba(102, 126, 234, 0.3);
-        backdrop-filter: blur(10px);
+        padding: 2.5rem 1.5rem;
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        border-radius: 20px;
+        border: none;
+        box-shadow: 0 12px 40px rgba(6, 182, 212, 0.25);
     }
 
     .header-premium h1 {
-        font-size: 3rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-size: 3.2rem;
+        color: #ffffff;
         margin-bottom: 0.5rem;
         font-weight: 900;
         letter-spacing: -1px;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .header-premium p {
-        color: #a0aec0;
-        font-size: 1rem;
-        font-weight: 300;
+        color: #f0f9fa;
+        font-size: 1.05rem;
+        font-weight: 500;
     }
 
     .search-container {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f0f9fa 100%);
         border-radius: 16px;
         padding: 1.5rem;
-        border: 2px solid rgba(102, 126, 234, 0.3);
+        border: 2px solid #06b6d4;
         margin-bottom: 2rem;
-        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 16px rgba(6, 182, 212, 0.1);
     }
 
     .result-card {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
-        border-radius: 12px;
+        background: linear-gradient(135deg, #ffffff 0%, #f7fbfc 100%);
+        border-radius: 14px;
         padding: 1.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border: 2px solid #e0f2fe;
         margin: 1rem 0;
-        backdrop-filter: blur(20px);
-        color: #e2e8f0;
+        color: #0c4a6e;
         transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(6, 182, 212, 0.08);
     }
 
     .result-card:hover {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%);
-        border-color: rgba(102, 126, 234, 0.5);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+        background: linear-gradient(135deg, #f0f9fa 0%, #ffffff 100%);
+        border-color: #06b6d4;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(6, 182, 212, 0.2);
     }
 
     .answer-premium {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.1) 100%);
-        border-left: 4px solid #667eea;
+        background: linear-gradient(135deg, #ecf9ff 0%, #f0fafe 100%);
+        border-left: 5px solid #06b6d4;
         padding: 2rem;
-        border-radius: 12px;
+        border-radius: 14px;
         margin: 2rem 0;
-        color: #e2e8f0;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(102, 126, 234, 0.3);
+        color: #0c4a6e;
+        border: 1px solid #cffafe;
         font-size: 1.05rem;
         line-height: 1.8;
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.12);
     }
 
     .metric-card {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f0f9fa 100%);
         padding: 1.5rem;
-        border-radius: 12px;
-        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 14px;
+        border: 2px solid #e0f2fe;
         text-align: center;
-        backdrop-filter: blur(10px);
-        color: #e2e8f0;
+        color: #0c4a6e;
+        box-shadow: 0 2px 8px rgba(6, 182, 212, 0.08);
+        transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+        border-color: #06b6d4;
+        box-shadow: 0 4px 16px rgba(6, 182, 212, 0.15);
+        transform: translateY(-2px);
     }
 
     .metric-card-value {
         font-size: 2.5rem;
         font-weight: 900;
-        color: #667eea;
-        margin: 0.5rem 0;
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0.75rem 0;
     }
 
     .metric-card-label {
-        font-size: 0.9rem;
-        color: #cbd5e0;
+        font-size: 0.85rem;
+        color: #0891b2;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 1.2px;
+        font-weight: 700;
     }
 
     .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
         color: white;
         border: none;
-        border-radius: 10px;
-        padding: 0.9rem 2rem;
+        border-radius: 12px;
+        padding: 1rem 2rem;
         font-weight: 700;
         font-size: 1rem;
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 8px 20px rgba(6, 182, 212, 0.3);
         transition: all 0.3s ease;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
         width: 100%;
     }
 
     .stButton > button:hover {
         transform: translateY(-3px);
-        box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6);
+        box-shadow: 0 12px 32px rgba(6, 182, 212, 0.5);
     }
 
     .stTextArea > div > div > textarea {
-        background: rgba(255, 255, 255, 0.05);
+        background: #ffffff;
         border-radius: 10px;
-        border: 2px solid rgba(102, 126, 234, 0.3);
-        color: #e2e8f0;
+        border: 2px solid #e0f2fe;
+        color: #0c4a6e;
         padding: 1rem;
         font-family: 'Segoe UI', sans-serif;
         font-size: 1rem;
     }
 
     .stTextArea > div > div > textarea:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-        background: rgba(255, 255, 255, 0.08);
+        border-color: #06b6d4;
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+        background: #f7fbfc;
     }
 
     .stTextArea > div > div > textarea::placeholder {
-        color: #718096;
+        color: #64748b;
     }
 
     .stTabs [data-baseweb="tab-list"] {
-        gap: 1rem;
-        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        gap: 0.5rem;
+        border-bottom: 3px solid #e2e8f0;
     }
 
     .stTabs [data-baseweb="tab"] {
         padding: 1rem 1.5rem;
         border-radius: 10px 10px 0 0;
-        background-color: transparent;
-        border: 2px solid transparent;
-        font-weight: 600;
-        color: #a0aec0;
+        background-color: #f1f5f9;
+        border: none;
+        font-weight: 700;
+        color: #64748b;
         transition: all 0.3s ease;
     }
 
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.1) 100%);
-        color: #667eea;
-        border: 2px solid #667eea;
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+        color: white;
+        border: none;
     }
 
     .source-badge {
         display: inline-block;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
         color: white;
-        padding: 0.3rem 0.8rem;
+        padding: 0.4rem 1rem;
         border-radius: 20px;
         font-size: 0.8rem;
-        font-weight: 600;
-        margin: 0.5rem 0.5rem 0.5rem 0;
-    }
-
-    .thinking-animation {
-        display: inline-block;
-        color: #667eea;
         font-weight: 700;
+        margin: 0.5rem 0.5rem 0.5rem 0;
+        box-shadow: 0 2px 8px rgba(6, 182, 212, 0.25);
     }
 
     [data-testid="stExpander"] {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-        border-radius: 10px;
-        border: 1px solid rgba(102, 126, 234, 0.3);
-        backdrop-filter: blur(10px);
+        background: #ffffff;
+        border-radius: 12px;
+        border: 2px solid #e0f2fe;
+        box-shadow: 0 2px 8px rgba(6, 182, 212, 0.08);
     }
 
     .stCheckbox > label {
-        color: #e2e8f0;
-        font-weight: 500;
-    }
-
-    [data-testid="stMetricDelta"] {
-        color: #667eea;
-    }
-
-    .sidebar-section {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        border: 1px solid rgba(102, 126, 234, 0.3);
-        margin: 1rem 0;
-        color: #e2e8f0;
+        color: #0c4a6e;
+        font-weight: 600;
     }
 
     .info-badge {
-        background: rgba(102, 126, 234, 0.15);
-        border-left: 4px solid #667eea;
-        padding: 1rem;
-        border-radius: 8px;
-        color: #cbd5e0;
+        background: linear-gradient(135deg, #ecf9ff 0%, #f0fafe 100%);
+        border-left: 5px solid #06b6d4;
+        padding: 1.2rem;
+        border-radius: 10px;
+        color: #0c4a6e;
         margin: 1rem 0;
+        border: 1px solid #cffafe;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(6, 182, 212, 0.1);
     }
 
     .success-badge {
-        background: rgba(74, 222, 128, 0.15);
-        border-left: 4px solid #4ade80;
-        padding: 1rem;
-        border-radius: 8px;
-        color: #d1fae5;
+        background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+        border-left: 5px solid #10b981;
+        padding: 1.2rem;
+        border-radius: 10px;
+        color: #065f46;
         margin: 1rem 0;
+        border: 1px solid #d1fae5;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
     }
 
     .error-badge {
-        background: rgba(248, 113, 113, 0.15);
-        border-left: 4px solid #f87171;
-        padding: 1rem;
-        border-radius: 8px;
-        color: #fee2e2;
+        background: linear-gradient(135deg, #fef2f2 0%, #fef8f8 100%);
+        border-left: 5px solid #ef4444;
+        padding: 1.2rem;
+        border-radius: 10px;
+        color: #7f1d1d;
         margin: 1rem 0;
+        border: 1px solid #fee2e2;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
     }
 </style>
 """, unsafe_allow_html=True)
 
 with st.sidebar:
-    st.markdown("### ⚙️ Settings")
+    st.markdown("""<div style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+                  padding: 1.5rem; border-radius: 12px; text-align: center; color: white;
+                  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25); margin-bottom: 1.5rem;">
+                  <h3 style="margin: 0; font-size: 1.3rem;">⚙️ Settings & Status</h3>
+                  </div>""", unsafe_allow_html=True)
+
     with st.expander("🔧 Advanced Options", expanded=True):
         top_k_default = st.slider("Results (Top-K)", 1, 50, 20, key="sidebar_top_k")
         include_context = st.checkbox("Show source context", value=True, key="sidebar_context")
@@ -269,8 +275,11 @@ with st.sidebar:
         resp = requests.get(f"{API_BASE}/stats", timeout=5)
         if resp.ok:
             stats = resp.json()
-            st.metric("📚 Documents", stats.get("document_count", 0))
-            st.metric("🔢 Embedding Dim", stats.get("embedding_dimension", 0))
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("📚 Docs", stats.get("document_count", 0))
+            with col2:
+                st.metric("🔢 Dim", stats.get("embedding_dimension", 0))
         else:
             st.error("Cannot fetch stats")
     except:
@@ -283,11 +292,12 @@ with st.sidebar:
 
     if len(st.session_state.query_history) > 0:
         for i, q in enumerate(st.session_state.query_history[-5:]):
-            if st.button(f"📌 {q[:30]}...", key=f"history_{i}"):
+            if st.button(f"📌 {q[:28]}...", key=f"history_{i}", use_container_width=True):
                 st.session_state.search_query = q
                 st.rerun()
     else:
-        st.info("No history yet")
+        st.markdown('<div style="text-align: center; color: #64748b; padding: 1rem;">No history yet</div>',
+                   unsafe_allow_html=True)
 
 with st.container():
     col1, col2, col3 = st.columns([1, 2, 1])
