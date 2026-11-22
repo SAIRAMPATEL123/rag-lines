@@ -19,6 +19,15 @@ def _tokenize(text: str) -> List[str]:
     return text.split()
 
 
+def _extract_page_from_text(text: str) -> int:
+    """Extract page number from [PAGE N] marker at start of text"""
+    import re
+    match = re.match(r'\[PAGE (\d+)\]', text)
+    if match:
+        return int(match.group(1))
+    return None
+
+
 def _count_tokens(text: str) -> int:
     """Count tokens in text"""
     return len(_tokenize(text))
@@ -136,8 +145,14 @@ class SemanticChunker(TokenAwareChunker):
             doc_hash = hashlib.sha256(f"{doc.source}:v1".encode()).hexdigest()[:8]
             chunk_index = 0
             current_chunk_tokens = []
+            current_page = None  # Track current page
 
             for paragraph in paragraphs:
+                # Extract page marker if present
+                page_num = _extract_page_from_text(paragraph)
+                if page_num:
+                    current_page = page_num
+
                 para_tokens = _tokenize(paragraph)
 
                 # Check if adding this paragraph would exceed chunk_size
@@ -146,18 +161,22 @@ class SemanticChunker(TokenAwareChunker):
                     chunk_text = " ".join(current_chunk_tokens)
                     chunk_id = f"{doc_hash}_{chunk_index:04d}"
 
+                    metadata = {
+                        **doc.metadata,
+                        "doc_type": doc.doc_type,
+                        "token_count": len(current_chunk_tokens),
+                        "doc_hash": doc_hash,
+                        "version": 1,
+                    }
+                    if current_page:
+                        metadata["page"] = current_page
+
                     chunk = Chunk(
                         text=chunk_text,
                         chunk_id=chunk_id,
                         source=doc.source,
                         chunk_index=chunk_index,
-                        metadata={
-                            **doc.metadata,
-                            "doc_type": doc.doc_type,
-                            "token_count": len(current_chunk_tokens),
-                            "doc_hash": doc_hash,
-                            "version": 1,
-                        }
+                        metadata=metadata
                     )
                     chunks.append(chunk)
                     chunk_index += 1
@@ -176,18 +195,22 @@ class SemanticChunker(TokenAwareChunker):
                 chunk_text = " ".join(current_chunk_tokens)
                 chunk_id = f"{doc_hash}_{chunk_index:04d}"
 
+                metadata = {
+                    **doc.metadata,
+                    "doc_type": doc.doc_type,
+                    "token_count": len(current_chunk_tokens),
+                    "doc_hash": doc_hash,
+                    "version": 1,
+                }
+                if current_page:
+                    metadata["page"] = current_page
+
                 chunk = Chunk(
                     text=chunk_text,
                     chunk_id=chunk_id,
                     source=doc.source,
                     chunk_index=chunk_index,
-                    metadata={
-                        **doc.metadata,
-                        "doc_type": doc.doc_type,
-                        "token_count": len(current_chunk_tokens),
-                        "doc_hash": doc_hash,
-                        "version": 1,
-                    }
+                    metadata=metadata
                 )
                 chunks.append(chunk)
 
