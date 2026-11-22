@@ -14,11 +14,9 @@ class ChromaVectorStore:
         self.config = get_config()
         self.collection_name = collection_name
         self.embedding_model = EmbeddingModel()
-        
-        # Absolute path — avoids relative path issues between ingest and api
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.abspath(os.path.join(base_dir, "..", ".."))
-        self.db_path = os.path.join(project_root, "data", "chroma_db")
+
+        # Use configured vectorstore path
+        self.db_path = self.config.vectorstore_path
         os.makedirs(self.db_path, exist_ok=True)
         
         logger.info(f"Initializing Chroma at: {self.db_path}")

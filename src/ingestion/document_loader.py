@@ -40,8 +40,15 @@ class DocumentLoader:
     
     def _load_file(self, file_path: str) -> Document:
         """Load single file based on type"""
+        file_size = os.path.getsize(file_path)
+        if file_size > self.config.max_file_size:
+            raise ValueError(
+                f"File {file_path} is {file_size / 1024 / 1024:.1f}MB, "
+                f"exceeds max {self.config.max_file_size / 1024 / 1024:.1f}MB"
+            )
+
         suffix = Path(file_path).suffix.lower()
-        
+
         if suffix == '.pdf':
             return self._load_pdf(file_path)
         elif suffix == '.md':

@@ -21,13 +21,13 @@ requests==2.31.0
 lxml>=4.9.3
 
 # Database
-SQLAlchemy==2.0.23
-# psycopg2-binary is optional — only needed if using PostgreSQL
-# psycopg2-binary==2.9.9
+SQLAlchemy>=2.1.0
+pymysql==1.1.0
+# For PostgreSQL: psycopg2-binary==2.9.9
 
-# Evaluation
+# Evaluation & NLP
 rouge-score>=0.0.4
-nltk==3.8.1
+nltk>=3.8.1
 
 # API
 fastapi>=0.110.0
