@@ -1,157 +1,101 @@
-from typing import Optional
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+"""Unified LocalLLM interface using provider abstraction"""
+
+from typing import Optional, Iterator
 from loguru import logger
 from config.config import get_config
-import time
+from src.llm.providers import get_provider, BaseProvider
 
 
 class LocalLLM:
-    """Interface with local LLM via Ollama or HuggingFace with connection pooling and retries"""
+    """Unified interface for local LLM providers (Ollama, OpenAI-compatible, etc.)"""
 
-    def __init__(self, model_name: str = None, base_url: str = None):
+    def __init__(self, provider_type: str = None, model_name: str = None, base_url: str = None):
+        """
+        Initialize LocalLLM with explicit provider selection
+
+        Args:
+            provider_type: "ollama" or "openai_compatible" (uses config if None)
+            model_name: Model identifier (uses config if None)
+            base_url: Base URL for provider (uses config if None)
+        """
         self.config = get_config()
+        self.provider_type = provider_type or self.config.llm_provider
         self.model_name = model_name or self.config.llm_model
         self.base_url = base_url or self.config.llm_base_url
-        self.temperature = self.config.llm_temperature
-        self.top_k = self.config.llm_top_k
-        self.top_p = self.config.llm_top_p
-        self.max_tokens = self.config.llm_max_tokens
 
-        self.session = self._create_session()
-        logger.info(f"LocalLLM initialized with model: {self.model_name}")
-
-    def _create_session(self) -> requests.Session:
-        """Create session with connection pooling and retry strategy"""
-        session = requests.Session()
-
-        retry_strategy = Retry(
-            total=3,
-            backoff_factor=1,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["POST", "GET"]
+        # Create provider instance
+        self.provider: BaseProvider = get_provider(
+            provider_type=self.provider_type,
+            model_name=self.model_name,
+            base_url=self.base_url,
+            temperature=self.config.llm_temperature,
+            max_tokens=self.config.llm_max_tokens,
+            top_p=self.config.llm_top_p
         )
 
-        adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=10)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-
-        return session
+        logger.info(f"LocalLLM: {self.provider_type} provider, model={self.model_name}")
 
     def generate(self, prompt: str, temperature: Optional[float] = None,
                 max_tokens: Optional[int] = None) -> str:
-        """Generate text using local LLM with exponential backoff"""
-        temperature = temperature or self.temperature
-        max_tokens = max_tokens or self.max_tokens
+        """
+        Generate text using configured provider
 
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                # Check if using OpenAI-compatible API (LM Studio) or Ollama
-                is_openai_compatible = "/v1" in self.base_url
+        Args:
+            prompt: Input prompt
+            temperature: Override default temperature (0.0-2.0, None uses config)
+            max_tokens: Override default max tokens (None uses config)
 
-                if is_openai_compatible:
-                    # OpenAI-compatible format (LM Studio, vLLM, etc)
-                    response = self.session.post(
-                        f"{self.base_url}/chat/completions",
-                        json={
-                            "model": self.model_name,
-                            "messages": [{"role": "user", "content": prompt}],
-                            "temperature": temperature,
-                            "top_p": self.top_p,
-                            "max_tokens": max_tokens,
-                            "stream": False
-                        },
-                        timeout=60
-                    )
-                else:
-                    # Ollama format
-                    response = self.session.post(
-                        f"{self.base_url}/api/generate",
-                        json={
-                            "model": self.model_name,
-                            "prompt": prompt,
-                            "temperature": temperature,
-                            "top_k": self.top_k,
-                            "top_p": self.top_p,
-                            "num_predict": max_tokens,
-                            "stream": False
-                        },
-                        timeout=60
-                    )
+        Returns:
+            Generated text
+        """
+        try:
+            # Pass through to provider, allowing None values
+            if temperature is not None or max_tokens is not None:
+                # Create temporary provider with overrides for this call
+                temp_provider = get_provider(
+                    provider_type=self.provider_type,
+                    model_name=self.model_name,
+                    base_url=self.base_url,
+                    temperature=temperature if temperature is not None else self.config.llm_temperature,
+                    max_tokens=max_tokens if max_tokens is not None else self.config.llm_max_tokens,
+                    top_p=self.config.llm_top_p
+                )
+                return temp_provider.generate(prompt)
+            else:
+                return self.provider.generate(prompt)
+        except Exception as e:
+            logger.error(f"Generation failed: {e}")
+            raise
 
-                if response.status_code == 200:
-                    result = response.json()
+    def stream(self, prompt: str) -> Iterator[str]:
+        """
+        Stream text generation (yields tokens)
 
-                    # Parse response based on API type
-                    if is_openai_compatible:
-                        # OpenAI-compatible format - try chat first, then completions
-                        choice = result.get("choices", [{}])[0]
-                        generated_text = choice.get("message", {}).get("content") or choice.get("text", "")
-                    else:
-                        # Ollama returns {"response": "..."}
-                        generated_text = result.get("response", "")
+        Args:
+            prompt: Input prompt
 
-                    logger.debug(f"Generated {len(generated_text)} characters")
-                    return generated_text
-                elif response.status_code in [429, 500, 502, 503, 504]:
-                    if attempt < max_retries - 1:
-                        wait_time = 2 ** attempt
-                        logger.warning(f"LLM returned {response.status_code}, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
-                        time.sleep(wait_time)
-                        continue
-                    else:
-                        raise Exception(f"LLM API returned status {response.status_code} after {max_retries} attempts")
-                else:
-                    logger.error(f"LLM API error: {response.status_code}")
-                    error_detail = response.text if response.text else f"HTTP {response.status_code}"
-                    logger.error(f"Response: {error_detail}")
-
-                    if response.status_code == 400:
-                        raise Exception(f"LLM API error 400: Bad request. Check model name '{self.model_name}' or prompt format. Response: {error_detail[:100]}")
-                    elif response.status_code == 404:
-                        raise Exception(f"LLM endpoint not found. Is Ollama running at {self.base_url}? Model '{self.model_name}' may not be loaded.")
-                    else:
-                        raise Exception(f"LLM API returned status {response.status_code}")
-
-            except requests.exceptions.Timeout:
-                if attempt < max_retries - 1:
-                    wait_time = 2 ** attempt
-                    logger.warning(f"LLM request timeout, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(wait_time)
-                    continue
-                else:
-                    logger.error(f"LLM request timeout after {max_retries} attempts")
-                    raise Exception(f"LLM connection timeout. Is Ollama running at {self.base_url}?")
-
-            except requests.exceptions.ConnectionError:
-                if attempt < max_retries - 1:
-                    wait_time = 2 ** attempt
-                    logger.warning(f"Cannot connect to LLM, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(wait_time)
-                    continue
-                else:
-                    logger.error(f"Cannot connect to LLM after {max_retries} attempts")
-                    raise Exception(f"LLM connection error. Is Ollama running at {self.base_url}?")
-
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    wait_time = 2 ** attempt
-                    logger.warning(f"Error generating text: {e}, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
-                    time.sleep(wait_time)
-                    continue
-                else:
-                    logger.error(f"Error generating text after {max_retries} attempts: {e}")
-                    raise
-
-        raise Exception("LLM generation failed after all retries")
+        Yields:
+            Text tokens
+        """
+        try:
+            for token in self.provider.stream(prompt):
+                yield token
+        except Exception as e:
+            logger.error(f"Streaming failed: {e}")
+            raise
 
     def is_available(self) -> bool:
-        """Check if LLM is available"""
+        """Check if LLM provider is available and healthy"""
         try:
-            response = self.session.get(f"{self.base_url}/api/tags", timeout=5)
-            return response.status_code == 200
+            return self.provider.health_check()
         except Exception as e:
-            logger.debug(f"LLM availability check failed: {e}")
+            logger.debug(f"Health check failed: {e}")
             return False
+
+    def list_models(self) -> list:
+        """List available models from provider"""
+        try:
+            return self.provider.list_models()
+        except Exception as e:
+            logger.warning(f"Failed to list models: {e}")
+            return []

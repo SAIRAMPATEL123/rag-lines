@@ -294,7 +294,7 @@ RAG_VECTORSTORE_PATH=/custom/path python -c "from config.config import get_confi
 ---
 
 # PHASE 3: LLM Provider Abstraction
-**Status:** 🔴 PENDING
+**Status:** 🟡 IN PROGRESS
 **Goal:** Clean provider interface, support Ollama + OpenAI-compatible
 
 ## Bugs to Fix in Phase 3
@@ -303,12 +303,43 @@ RAG_VECTORSTORE_PATH=/custom/path python -c "from config.config import get_confi
 3. ❌ Zero values rejected (temperature or default)
 4. ❌ URL construction produces duplicates
 
-## Phase 3 Implementation (TO DO)
-- [ ] Create provider base interface
-- [ ] Implement OllamaProvider
-- [ ] Implement OpenAICompatibleProvider
-- [ ] Fix health checks
-- [ ] Fix parameter handling
+## Phase 3 Implementation
+
+### FIX 1: Provider Base Interface
+**Files:** `src/llm/providers.py` (NEW)
+- ✅ Created abstract BaseProvider
+- ✅ Defined generate(), stream(), health_check(), list_models()
+- ✅ Common parameter validation (temp, max_tokens, etc.)
+- Status: ✅ DONE
+
+### FIX 2: OllamaProvider Implementation
+**File:** `src/llm/providers.py`
+- ✅ Implements BaseProvider
+- ✅ Correct /api/generate endpoint
+- ✅ Proper health check: /api/tags
+- ✅ Proper parameter mapping
+- Status: ✅ DONE
+
+### FIX 3: OpenAICompatibleProvider Implementation
+**File:** `src/llm/providers.py`
+- ✅ Implements BaseProvider
+- ✅ /v1/chat/completions endpoint
+- ✅ Health check: /v1/models
+- ✅ Works with LM Studio, vLLM, etc.
+- Status: ✅ DONE
+
+### FIX 4: Config-Based Provider Selection
+**File:** `config/config.py` (NEW FIELD)
+- ✅ Added llm_provider field (ollama | openai_compatible)
+- ✅ Validates provider setting at startup
+- Status: ✅ DONE
+
+### FIX 5: LocalLLM Wrapper Updated
+**File:** `src/llm/local_llm.py` (REFACTORED)
+- ✅ Loads correct provider based on config
+- ✅ No more URL guessing
+- ✅ Explicit provider setting
+- Status: ✅ DONE
 
 ---
 

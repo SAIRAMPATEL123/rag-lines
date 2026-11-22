@@ -8,8 +8,9 @@ class Config(BaseSettings):
     """Application configuration management with RAG_ prefix"""
 
     # LLM Configuration
-    llm_model: str = Field(default="mistral-7b-instruct-v0.1", description="LLM model name")
-    llm_base_url: str = Field(default="http://localhost:11434/api/generate", description="LLM server URL")
+    llm_provider: str = Field(default="ollama", pattern="^(ollama|openai_compatible)$", description="LLM provider type")
+    llm_model: str = Field(default="mistral", description="LLM model name")
+    llm_base_url: str = Field(default="http://localhost:11434", description="LLM server base URL")
     llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
     llm_top_k: int = Field(default=40, ge=1)
     llm_top_p: float = Field(default=0.9, ge=0.0, le=1.0)
