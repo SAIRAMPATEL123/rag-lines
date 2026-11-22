@@ -40,8 +40,15 @@ class DocumentLoader:
     
     def _load_file(self, file_path: str) -> Document:
         """Load single file based on type"""
+        file_size = os.path.getsize(file_path)
+        if file_size > self.config.max_file_size:
+            raise ValueError(
+                f"File {file_path} is {file_size / 1024 / 1024:.1f}MB, "
+                f"exceeds max {self.config.max_file_size / 1024 / 1024:.1f}MB"
+            )
+
         suffix = Path(file_path).suffix.lower()
-        
+
         if suffix == '.pdf':
             return self._load_pdf(file_path)
         elif suffix == '.md':
@@ -56,16 +63,34 @@ class DocumentLoader:
             raise ValueError(f"Unsupported file type: {suffix}")
     
     def _load_pdf(self, file_path: str) -> Document:
-        """Extract text from PDF"""
+        """Extract text from PDF with page provenance"""
         try:
             import PyPDF2
-            text = ""
+            page_texts = []
+            page_count = 0
+
             with open(file_path, 'rb') as pdf_file:
                 reader = PyPDF2.PdfReader(pdf_file)
-                for page in reader.pages:
-                    text += page.extract_text()
-            logger.info(f"Loaded PDF: {file_path}")
-            return Document(text, file_path, "pdf", {"pages": len(reader.pages)})
+                page_count = len(reader.pages)
+
+                for page_num, page in enumerate(reader.pages, 1):
+                    text = page.extract_text()
+                    if text is None:
+                        text = "[Empty page or scanned page]"
+                    text = text.strip()
+                    if text:
+                        # Mark page boundaries in text
+                        page_texts.append(f"[PAGE {page_num}]\n{text}")
+
+            combined_text = "\n\n".join(page_texts)
+
+            logger.info(f"Loaded PDF: {file_path} ({page_count} pages)")
+            return Document(
+                combined_text,
+                file_path,
+                "pdf",
+                {"pages": page_count, "page_markers": True}
+            )
         except Exception as e:
             logger.error(f"Error loading PDF {file_path}: {e}")
             raise

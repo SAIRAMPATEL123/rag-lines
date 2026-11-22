@@ -14,11 +14,9 @@ class ChromaVectorStore:
         self.config = get_config()
         self.collection_name = collection_name
         self.embedding_model = EmbeddingModel()
-        
-        # Absolute path — avoids relative path issues between ingest and api
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.abspath(os.path.join(base_dir, "..", ".."))
-        self.db_path = os.path.join(project_root, "data", "chroma_db")
+
+        # Use configured vectorstore path
+        self.db_path = self.config.vectorstore_path
         os.makedirs(self.db_path, exist_ok=True)
         
         logger.info(f"Initializing Chroma at: {self.db_path}")
@@ -37,23 +35,36 @@ class ChromaVectorStore:
             logger.info(f"Created new collection '{collection_name}'")
 
     def add_documents(self, chunks: List[Chunk]) -> None:
+        """Add chunks, using upsert to handle re-ingestion"""
         if not chunks:
             logger.warning("No chunks to add")
             return
-        
+
         logger.info(f"Adding {len(chunks)} chunks to {self.db_path}")
         texts = [chunk.text for chunk in chunks]
         embeddings = self.embedding_model.embed(texts)
         metadatas = [chunk.metadata for chunk in chunks]
         ids = [chunk.chunk_id for chunk in chunks]
-        
-        self.collection.add(
-            ids=ids,
-            embeddings=embeddings.tolist(),
-            metadatas=metadatas,
-            documents=texts
-        )
-        logger.info(f"Added {len(chunks)} chunks — total: {self.collection.count()}")
+
+        # Use upsert to handle duplicate IDs (e.g., re-ingestion)
+        try:
+            self.collection.upsert(
+                ids=ids,
+                embeddings=embeddings.tolist(),
+                metadatas=metadatas,
+                documents=texts
+            )
+            logger.info(f"Upserted {len(chunks)} chunks — total: {self.collection.count()}")
+        except Exception as e:
+            logger.warning(f"Upsert failed, trying add: {e}")
+            # Fallback to add (for older Chroma versions)
+            self.collection.add(
+                ids=ids,
+                embeddings=embeddings.tolist(),
+                metadatas=metadatas,
+                documents=texts
+            )
+            logger.info(f"Added {len(chunks)} chunks — total: {self.collection.count()}")
 
     def search(self, query: str, top_k: int = None) -> List[Tuple[str, float, Dict]]:
         top_k = top_k or self.config.retrieval_top_k
